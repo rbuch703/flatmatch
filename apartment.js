@@ -145,45 +145,18 @@ function getAABB( segments)
 }
 
 
-var BLACK = 0xFF000000;
-var WHITE = 0xFFFFFFFF;
-var GRAY =  0xFF808080;
-var GREEN = 0xFF00FF00;
-
-var metersPerPixel = 10.0/720;
-
-var HEIGHT = 2.5;
-var WINDOW_LOW = 0.90;
-var WINDOW_HIGH = 2.20;
-var WINDOW_HEIGHT = WINDOW_HIGH - WINDOW_LOW;
-var TOP_WALL_HEIGHT = HEIGHT - WINDOW_HIGH;
-
-//var wallColor = [0.8, 0.8, 0.8];
-//var windowColor = [15, 14, 12];
-
-function createVector3(x, y, z) { return [x, y, z];}
-function createRectangle( pos, width, height) { return {"pos": pos, "width": width, "height": height}; }
-
-
-Apartment.rotate = function (vector, angle)
-{
-    angle = angle /180 * Math.PI;
-
-    var v0    = Math.cos( angle ) * vector[0] - Math.sin( angle ) * vector[1] ;
-    vector[1] = Math.sin( angle ) * vector[0] + Math.cos( angle ) * vector[1] ;
-    
-    vector[0] = v0;
-}
-
 Apartment.prototype.loadLayout = function(request, position, yaw, height)
 {
         
     if (request.readyState != 4)
         return;
 
+    if (request.response == null)
+        return;
     //console.log("request: %o", request);
 
     var segments = [];
+    this.scale = request.response.scale;
     var rectangles = request.response.geometry;
     // json geometry already has the correct x/y scale, 
     // but is stored in [cm] while we need it in [m];
@@ -212,25 +185,31 @@ Apartment.prototype.loadLayout = function(request, position, yaw, height)
     
     //step 2: shift apartment to relocate its center to (0,0) to give its 'position' a canonical meaning
     var aabb = getAABB( segments);
-    var dx = aabb.max_x - aabb.min_x;
-    var dy = aabb.max_y - aabb.min_y;
+    console.log("AABB before: %o", getAABB( segments));
+    //var dx = aabb.max_x - aabb.min_x;
+    //var dy = aabb.max_y - aabb.min_y;
     var mid_x = (aabb.max_x + aabb.min_x) / 2.0;
     var mid_y = (aabb.max_y + aabb.min_y) / 2.0;
+    this.pixelShift = [mid_x, mid_y];
 
     for (var i in segments)
     {
         segments[i].pos[0] -= mid_x;
         segments[i].pos[1] -= mid_y;
     }    
+    console.log("AABB after: %o", getAABB( segments));
     
    
     //step 3: rotate apartment;
+    //console.log("apartment yaw is %s", yaw);
     for (var i in segments)
     {
-        Apartment.rotate( segments[i].pos, yaw);
-        Apartment.rotate( segments[i].width, yaw);
-        Apartment.rotate( segments[i].height, yaw);
+        rotate( segments[i].pos, yaw);
+        rotate( segments[i].width, yaw);
+        rotate( segments[i].height, yaw);
     }    
+    
+    this.yawShift = yaw;
     
     //step 4: move to selected position
     var earthCircumference = 2 * Math.PI * (6378.1 * 1000);
@@ -239,7 +218,8 @@ Apartment.prototype.loadLayout = function(request, position, yaw, height)
 
     var dx = (position.lng - Controller.position.lng) * metersPerDegreeLng;
     var dy = (position.lat - Controller.position.lat) * metersPerDegreeLat;
-    
+
+    this.worldShift = [dx, dy];
     //console.log("distance to apartment: dx=%sm, dy=%sm", dx, dy);
     for (var i in segments)
     {

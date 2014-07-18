@@ -16,6 +16,8 @@
     <link   type="text/css" rel="stylesheet" href="styles/leaflet.css" />
 
     <style>
+        #mapDiv { width:100%; height:500px;}
+    /*
         @media (min-width: 1440px) {
               #leftNavDiv { float:left; margin-right:20px; width:400px}
               #contentDiv { margin-left: 420px; margin-right:10px; }
@@ -23,11 +25,11 @@
           }
 
         @media (max-width: 1439px) {
-              #leftNavDiv { margin-left: 10px; margin-right:50px; } /*leave a 50px bar on the right to */
-              #contentDiv { margin-left: 10px; margin-right:50px; } /*allow for mouse and touch scrolling */
+              #leftNavDiv { margin-left: 10px; margin-right:50px; } //leave a 50px bar on the right to 
+              #contentDiv { margin-left: 10px; margin-right:50px; } //allow for mouse and touch scrolling
               #mapDiv { width:100%; height:600px }
           }
-
+*/
     </style>
 
     <script type="text/javascript" src="leaflet.js"></script>
@@ -147,9 +149,9 @@
         var idx;
         Controller.initFromQueryString( (idx = document.URL.indexOf("?")) >= 0 ? 
             document.URL.substring(idx + 1):
-            "lat=52.5184&lng=13.3725&yaw=104&pitch=10"); //default to a view of the Berlin Bundestag
+            "lat=52.13376195&lng=11.63842729&yaw=0&pitch=0"
+            /*"lat=52.5184&lng=13.3725&yaw=104&pitch=10"*/); //default to a view of the Berlin Bundestag
         Controller.onRequestFrameRender = scheduleFrameRendering;
-
         map = L.map('mapDiv').setView([52.15, 11.63], 14); //global 
         map.on("click", onMapClick);
         map.on("zoomend", renderFrustum);
@@ -161,6 +163,7 @@
 
         L.control.scale({imperial:false, position:"topright"}).addTo(map);
 	    initGl();  //initialize webGL canvas
+
 
         if (gl)
         {
@@ -174,26 +177,15 @@
             webGlCanvas.addEventListener("touchend",    function(ev) {Controller.onTouchEnd(ev);},  false);
             webGlCanvas.addEventListener("touchleave",  function(ev) {Controller.onTouchEnd(ev);},  false);
             webGlCanvas.addEventListener("touchmove",   function(ev) {Controller.onTouchMove(ev);}, false);
-            
         }
 
         document.addEventListener("keydown", function(ev) {Controller.onKeyDown(ev);},  false);
         document.addEventListener("keyup",   function(ev) {Controller.onKeyUp(ev);},  false);
-
 		document.body.onresize = onResize;
-		sampleLocations.onchange = onSampleLocationSelected;
 
         onChangeLocation();
 
 
-        /* For the narrow layout, the 3D view should come directly after the map to reduce the need for scrolling and to
-         * improve chances that map and 3D view will fit on the same page.
-         * For the wide layout, the social media div (Facebook integration) should be in the left navigation column, 
-         * logically in between the map and the 3D view.
-         */
-        narrowLayout = window.matchMedia( "(max-width: 1439px)" );
-        narrowLayout.addListener(function() {(narrowLayout.matches ? contentDiv : leftNavDiv).appendChild(socialMediaDiv);});
-        (narrowLayout.matches ? contentDiv : leftNavDiv).appendChild(socialMediaDiv); //to handle the initial layout
     }   
     
     var narrowLayout;
@@ -227,7 +219,11 @@
         if (map.getZoom() < 16)
             map.setZoom(16);
 
-        mapApartment = new Apartment(7029, {lat:52.13376195, lng:11.63842729}, -74.5, 10);
+        var layoutId = 137;
+        mapApartment = new Apartment(layoutId, {lat:52.13376195, lng:11.63842729}, -74.5, 10);
+        layoutImage = new Image();
+        layoutImage.onload = function() {onResize(); renderMiniMap();};
+        layoutImage.src = "http://localhost:1080/rest/get/layout/"+ layoutId;
         
         mapPlane = new MapLayer(gl, Controller.position);
         mapPlane.onProgress= scheduleFrameRendering;
@@ -255,26 +251,6 @@
         onChangeLocation();
     }   
     
-    function onSampleLocationSelected(e)
-    {
-        if (sampleLocations.value !== "dummy")
-        {
-            var pos = JSON.parse(sampleLocations.value);
-
-            if ("yaw" in pos)
-                Controller.viewAngleYaw = pos.yaw;
-            if ("pitch" in pos)
-                Controller.viewAnglePitch = pos.pitch;
-    
-            if ("lat" in pos && "lng" in pos)
-            {
-                Controller.position = pos;
-                onChangeLocation();
-            }
-            //window.location.href = sampleLocations.value;
-        }
-    }
-
     var frameRenderingScheduled = false;
     function scheduleFrameRendering()
     {
@@ -296,6 +272,7 @@
         updatePositionMarker();
         renderFrustum();
         renderScene();
+        renderMiniMap();
         frameRenderingScheduled = false;
         
         // If at least one key is still pressed, schedule rendering of the next frame right away:
@@ -382,15 +359,93 @@
 
 	function onResize()
 	{
-        webGlCanvas.height = webGlCanvas.clientHeight;
-        webGlCanvas.width  = webGlCanvas.clientWidth;
-	    
+	    /*Note: 
+	     *   - Canvas.style.height sets the size of the object on screen, but is a CSS property (may also be something like "100%")
+	     *   - Canvas.height sets the logical size of the drawing buffer is pixels (its content is later scaled to fit the object on screen)
+	     *   - Canvas.clientHeight is the read-only value of the consequence of Canvas.style.height in pixels (even if style.height is given in percent, etc.)
+         */	    
+	    webGlCanvas.style.height = webGlCanvas.clientWidth / 16 * 9 + "px";
+        webGlCanvas.height = webGlCanvas.clientHeight / 2;
+        webGlCanvas.width  = webGlCanvas.clientWidth / 2;
+
 	    if (gl)
-	    {
 			gl.viewport(0, 0, webGlCanvas.width, webGlCanvas.height);
-			scheduleFrameRendering();
-		}
+
+        if (layoutImage)
+        {
+	        var aspect = layoutImage.width / layoutImage.height;
+	        minimapCanvas.style.height = minimapCanvas.clientWidth / aspect + "px";
+            minimapCanvas.height = minimapCanvas.clientHeight;
+            minimapCanvas.width  = minimapCanvas.clientWidth;
+        }
+        
+        scheduleFrameRendering();
 	}	
+	
+	var layoutImage;
+	
+	function renderMiniMap()
+	{
+	    if (!layoutImage)
+	        return;
+
+	    if (!minimapCanvas.context2d)
+	    {
+	        minimapCanvas.context2d = minimapCanvas.getContext("2d");
+
+	    }
+	    var scale = Math.min( minimapCanvas.width / layoutImage.width, minimapCanvas.height / layoutImage.height);
+	    minimapCanvas.context2d.drawImage(layoutImage, 0, 0, layoutImage.width*scale, layoutImage.height*scale);
+	    
+	    if (mapApartment.worldShift && mapApartment.pixelShift && mapApartment.yawShift)
+	    {
+	        var pos = [Controller.localPosition.x, Controller.localPosition.y];
+	        console.log("LocalPos: %s", pos);
+
+            var p1=[];
+            p1[0] = pos[0] - mapApartment.worldShift[0];
+            p1[1] = pos[1] + mapApartment.worldShift[1];
+	        console.log("After World Shift: %s", p1);
+
+            var p2 = [p1[0], -p1[1]];
+            //console.log("yawShift is %s", mapApartment.yawShift);
+            rotate(p2, + mapApartment.yawShift);
+	        console.log("After Apartment Rotation: %s", p2);
+	        
+	        
+	        var p3 = add2(p2, mapApartment.pixelShift);
+	        console.log("After Center Shift [m]: %s", p3);
+	        
+	        var p4 = [];
+	        p4[0] = p3[0] * (mapApartment.scale);
+	        p4[1] = p3[1] * (mapApartment.scale);
+	        console.log("Pixel Coordinates: %s", p4);
+
+        
+	        console.log("");
+	        pos = p4;
+	        var ctx = minimapCanvas.context2d;
+	        ctx.lineWidth = 2;
+	        ctx.strokeStyle = "#44D";
+	        ctx.beginPath();
+            ctx.arc(pos[0] * scale, minimapCanvas.height - pos[1] * scale, 5, 0, 2 * Math.PI);
+            ctx.stroke();
+
+	        var effYaw = Controller.viewAngleYaw - mapApartment.yawShift+360;
+	        effYaw = effYaw / 180 * Math.PI;
+	        var lookDir = [Math.sin(effYaw), Math.cos(effYaw) ];
+	        //console.log("effYaw: %s", effYaw);
+	        //console.log(eye[0]*scale,eye[1]*scale);
+            
+	        ctx.strokeStyle = "#D44";
+	        ctx.beginPath();
+            ctx.moveTo( 100, 100);
+            ctx.lineTo( 100 + 10 * lookDir[0], 100 - 10 * lookDir[1]);
+            ctx.stroke();
+
+	    }
+	    
+	}
 	
 	function renderScene()
 	{
@@ -416,17 +471,7 @@
     <title>Open Street View</title>
 </head>
 
-<body onload="init()"  > <!-- style ="padding: 0px; margin: 0px;" -->
-
-<!-- initialization for Facebook integration --> 
-<div id="fb-root"></div>
-<script>(function(d, s, id) {
-  var js, fjs = d.getElementsByTagName(s)[0];
-  if (d.getElementById(id)) return;
-  js = d.createElement(s); js.id = id;
-  js.src = "//connect.facebook.net/en_US/sdk.js#xfbml=1&version=v2.0";
-  fjs.parentNode.insertBefore(js, fjs);
-}(document, 'script', 'facebook-jssdk'));</script>
+<body onload="init()"  style="position:absolute; top:0px; bottom:0px; left:0px; right:0px"> <!-- style ="padding: 0px; margin: 0px;" -->
 
 <div id="glErrorDiv" style="display:none">
     <h2 style="">Open Street View</h2>
@@ -443,52 +488,27 @@
 </div>
 
 
-<div id="leftNavDiv" style="">
+
+<div style="width:100%; height:100%">
+<div id="leftNavDiv" style="display: inline-block; width: 29%; height:100%;border: 1px solid red; vertical-align:top">
     <h2 style="">Open Street View</h2>
+    <div id="mapDiv" style=""> </div>
 
-    <div id="explanation"> 
-        <p>Click on any location on the map to see a 3D view of the world as seen from that position. Then click and drag the 3D view with your mouse to look around.</p>
-        <p>Here are some location suggestions: 
-            <select id="sampleLocations">
-              <option value="dummy">-- select one --</option>
-              <option value='{"lat":51.4979,   "lng":-0.1203,   "yaw":303, "pitch":7 }'>London (House of Parliament)</option>
-              <option value='{"lat":40.7683,   "lng":-73.9794,  "yaw":261, "pitch":14}'>New York City (Central Park)</option>
-              <option value='{"lat":38.9001,   "lng":-77.0364,  "yaw":187, "pitch":0 }'>Washington DC(The White House)</option>
-              <option value='{"lat":36.1132,   "lng":-115.1727, "yaw":284, "pitch":12}'>Las Vegas (The Bellagio)</option>
-              <option value='{"lat":52.509344, "lng":13.375242, "yaw":299, "pitch":15}'>Berlin (Potsdamer Platz)</option>
-              <option value='{"lat":52.5184,   "lng":13.3725,   "yaw":104, "pitch":10}'>Berlin (Bundestag, Brandenburger Tor)</option>
-              <option value='{"lat":51.3429,   "lng":12.3820,   "yaw":343, "pitch":11}'>Leipzig (Main Station)</option>
-              <option value='{"lat":52.1394,   "lng":11.6396,   "yaw":203, "pitch":17}'>Magdeburg (Universitätsplatz)</option>
-            </select> 
-        </p>
-        <p>Buildings missing or inaccurate? <a href="howToEdit.html" target="_blank">Add them yourself</a>!</p>
-    </div>
-
-    <div id="mapDiv" style="margin-bottom:15px"> </div>
+    <h4> Apartment Layout: </h4>    
+	<canvas id="minimapCanvas" style="width:100%; border: 1px solid blue;" ></canvas>
     
-    <div id="socialMediaDiv" >
-    <p>
-    Let me know what you think about this page:</p>
-    <!-- Facebook like/share box box -->
-        <div class="fb-like" data-href="http://rbuch703.de/osmsv" data-layout="button_count" data-action="like" data-show-faces="false" data-share="true"></div>
-
-    <!-- Facebook comment box -->
-        <div class="fb-comments" data-href="http://rbuch703.de/osmsv" data-width="400px" data-numposts="5" data-colorscheme="light"></div>
-
-    </div>
-
 </div>
 
 
-<div id="contentDiv" >
+<div id="contentDiv" style="display: inline-block; width:70%; border: 1 px solid blue; vertical-align:top">
     <!-- <div id="nav" style="background-color:#EEE; position:fixed; width:75%; top:50px; bottom:0px; right: 0px; overflow-y:scroll">-->
-		<canvas id="webGlCanvas" style="width:100%; height:auto;background:black" ></canvas>
+		<canvas id="webGlCanvas" style="width:100%; background:black" ></canvas>
         <div style="font-size:80%; font-style:italic">
 The map and building geometry are &copy;OpenStreetMap contributors and are <a href="http://www.openstreetmap.org/copyright">licensed</a> under the Creative Commons BY-SA (map) and Open Database License (buildings) licenses.<br> For administrative questions on this page please contact the <a href="mailto:rbuch703@gmail.com">webmaster</a>.
         </div>
 
-    </div>
-</div> 
+</div>
+</div>
 
 
 </body>
