@@ -15,7 +15,18 @@ function Apartment(id, position, yaw, height) {
     this.layoutRequest.responseType = "json";
     //this.layoutRequest.apartment = this;
     var aptTmp = this;
-    this.layoutRequest.onreadystatechange = function() { var tmp = aptTmp.loadLayout(this, position, yaw, height); aptTmp.processLayout(tmp);}
+    this.layoutRequest.onreadystatechange = function() 
+    { 
+        if (this.readyState != 4)
+        return;
+
+        if (this.response == null)
+            return;
+
+        var tmp = aptTmp.loadLayout(this, position, yaw, height); 
+        aptTmp.processLayout(tmp);
+    }
+    
     this.layoutRequest.send();
 }
 
@@ -84,7 +95,6 @@ Apartment.prototype.processLayout = function(segments)
 {
     this.vertices = [];
     this.texCoords= [];
-    console.log("Processing Layout");
     for (var i in segments)
     {
         var seg = segments[i];
@@ -148,11 +158,6 @@ function getAABB( segments)
 Apartment.prototype.loadLayout = function(request, position, yaw, height)
 {
         
-    if (request.readyState != 4)
-        return;
-
-    if (request.response == null)
-        return;
     //console.log("request: %o", request);
 
     var segments = [];
@@ -180,12 +185,10 @@ Apartment.prototype.loadLayout = function(request, position, yaw, height)
         
         segments.push(rectangles[i]);
 
-
     }
     
     //step 2: shift apartment to relocate its center to (0,0) to give its 'position' a canonical meaning
     var aabb = getAABB( segments);
-    console.log("AABB before: %o", getAABB( segments));
     //var dx = aabb.max_x - aabb.min_x;
     //var dy = aabb.max_y - aabb.min_y;
     var mid_x = (aabb.max_x + aabb.min_x) / 2.0;
@@ -197,7 +200,6 @@ Apartment.prototype.loadLayout = function(request, position, yaw, height)
         segments[i].pos[0] -= mid_x;
         segments[i].pos[1] -= mid_y;
     }    
-    console.log("AABB after: %o", getAABB( segments));
     
    
     //step 3: rotate apartment;

@@ -397,19 +397,19 @@
 	    var scale = Math.min( minimapCanvas.width / layoutImage.width, minimapCanvas.height / layoutImage.height);
 	    minimapCanvas.context2d.drawImage(layoutImage, 0, 0, layoutImage.width*scale, layoutImage.height*scale);
 	    
-	    if (mapApartment.worldShift && mapApartment.pixelShift && mapApartment.yawShift)
+	    if (mapApartment.worldShift && mapApartment.pixelShift && mapApartment.yawShift != undefined)
 	    {
 	        var pos = [Controller.localPosition.x, Controller.localPosition.y];
 	        console.log("LocalPos: %s", pos);
 
             var p1=[];
             p1[0] = pos[0] - mapApartment.worldShift[0];
-            p1[1] = pos[1] + mapApartment.worldShift[1];
+            p1[1] = pos[1] - mapApartment.worldShift[1];
 	        console.log("After World Shift: %s", p1);
 
             var p2 = [p1[0], -p1[1]];
             //console.log("yawShift is %s", mapApartment.yawShift);
-            rotate(p2, + mapApartment.yawShift);
+            rotate(p2, - mapApartment.yawShift);
 	        console.log("After Apartment Rotation: %s", p2);
 	        
 	        
@@ -428,7 +428,7 @@
 	        ctx.lineWidth = 2;
 	        ctx.strokeStyle = "#44D";
 	        ctx.beginPath();
-            ctx.arc(pos[0] * scale, minimapCanvas.height - pos[1] * scale, 5, 0, 2 * Math.PI);
+            ctx.arc(pos[0] * scale, pos[1] * scale, 5, 0, 2 * Math.PI);
             ctx.stroke();
 
 	        var effYaw = Controller.viewAngleYaw - mapApartment.yawShift+360;
