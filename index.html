@@ -16,7 +16,7 @@
     <link   type="text/css" rel="stylesheet" href="styles/leaflet.css" />
 
     <style>
-        #mapDiv { width:100%; height:500px;}
+        #mapDiv { width:100%; height:40%;}
     /*
         @media (min-width: 1440px) {
               #leftNavDiv { float:left; margin-right:20px; width:400px}
@@ -390,61 +390,33 @@
 	        return;
 
 	    if (!minimapCanvas.context2d)
-	    {
 	        minimapCanvas.context2d = minimapCanvas.getContext("2d");
 
-	    }
-	    var scale = Math.min( minimapCanvas.width / layoutImage.width, minimapCanvas.height / layoutImage.height);
-	    minimapCanvas.context2d.drawImage(layoutImage, 0, 0, layoutImage.width*scale, layoutImage.height*scale);
+        var ctx = minimapCanvas.context2d;
+
+	    var canvasScale = Math.min( minimapCanvas.width / layoutImage.width, minimapCanvas.height / layoutImage.height);
+	    ctx.drawImage(layoutImage, 0, 0, layoutImage.width * canvasScale, layoutImage.height * canvasScale);
 	    
-	    if (mapApartment.worldShift && mapApartment.pixelShift && mapApartment.yawShift != undefined)
-	    {
-	        var pos = [Controller.localPosition.x, Controller.localPosition.y];
-	        console.log("LocalPos: %s", pos);
+	    var pos = mapApartment.localToPixelCoordinates( Controller.localPosition );
+	    console.log(pos);
+	    pos[0] *= canvasScale;
+	    pos[1] *= canvasScale;
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "#44D";
+        ctx.beginPath();
+        ctx.arc(pos[0], pos[1], 5, 0, 2 * Math.PI);
+        ctx.stroke();
 
-            var p1=[];
-            p1[0] = pos[0] - mapApartment.worldShift[0];
-            p1[1] = pos[1] - mapApartment.worldShift[1];
-	        console.log("After World Shift: %s", p1);
-
-            var p2 = [p1[0], -p1[1]];
-            //console.log("yawShift is %s", mapApartment.yawShift);
-            rotate(p2, - mapApartment.yawShift);
-	        console.log("After Apartment Rotation: %s", p2);
-	        
-	        
-	        var p3 = add2(p2, mapApartment.pixelShift);
-	        console.log("After Center Shift [m]: %s", p3);
-	        
-	        var p4 = [];
-	        p4[0] = p3[0] * (mapApartment.scale);
-	        p4[1] = p3[1] * (mapApartment.scale);
-	        console.log("Pixel Coordinates: %s", p4);
-
+        var effYaw = Controller.viewAngleYaw - mapApartment.yawShift;
+        effYaw = effYaw / 180 * Math.PI;
+        var lookDir = [Math.sin(effYaw), Math.cos(effYaw) ];
         
-	        console.log("");
-	        pos = p4;
-	        var ctx = minimapCanvas.context2d;
-	        ctx.lineWidth = 2;
-	        ctx.strokeStyle = "#44D";
-	        ctx.beginPath();
-            ctx.arc(pos[0] * scale, pos[1] * scale, 5, 0, 2 * Math.PI);
-            ctx.stroke();
+        ctx.strokeStyle = "#D44";
+        ctx.beginPath();
+        ctx.moveTo( pos[0], pos[1]);
+        ctx.lineTo( pos[0] + 10 * lookDir[0], pos[1] - 10 * lookDir[1]);
+        ctx.stroke();
 
-	        var effYaw = Controller.viewAngleYaw - mapApartment.yawShift+360;
-	        effYaw = effYaw / 180 * Math.PI;
-	        var lookDir = [Math.sin(effYaw), Math.cos(effYaw) ];
-	        //console.log("effYaw: %s", effYaw);
-	        //console.log(eye[0]*scale,eye[1]*scale);
-            
-	        ctx.strokeStyle = "#D44";
-	        ctx.beginPath();
-            ctx.moveTo( 100, 100);
-            ctx.lineTo( 100 + 10 * lookDir[0], 100 - 10 * lookDir[1]);
-            ctx.stroke();
-
-	    }
-	    
 	}
 	
 	function renderScene()
@@ -490,17 +462,17 @@
 
 
 <div style="width:100%; height:100%">
-<div id="leftNavDiv" style="display: inline-block; width: 29%; height:100%;border: 1px solid red; vertical-align:top">
+<div id="leftNavDiv" style="display: inline-block; width: 29%; height:100%; vertical-align:top">
     <h2 style="">Open Street View</h2>
     <div id="mapDiv" style=""> </div>
 
     <h4> Apartment Layout: </h4>    
-	<canvas id="minimapCanvas" style="width:100%; border: 1px solid blue;" ></canvas>
+	<canvas id="minimapCanvas" style="width:100%" ></canvas>
     
 </div>
 
 
-<div id="contentDiv" style="display: inline-block; width:70%; border: 1 px solid blue; vertical-align:top">
+<div id="contentDiv" style="display: inline-block; width:70%; vertical-align:top">
     <!-- <div id="nav" style="background-color:#EEE; position:fixed; width:75%; top:50px; bottom:0px; right: 0px; overflow-y:scroll">-->
 		<canvas id="webGlCanvas" style="width:100%; background:black" ></canvas>
         <div style="font-size:80%; font-style:italic">

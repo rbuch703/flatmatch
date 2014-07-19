@@ -234,3 +234,23 @@ Apartment.prototype.loadLayout = function(request, position, yaw, height)
 }
 
 
+Apartment.prototype.localToPixelCoordinates = function(localPosition)
+{
+    if (!mapApartment.worldShift || !mapApartment.pixelShift || mapApartment.yawShift === undefined)
+        return [0,0];
+
+    var pos = [];
+    pos[0] = localPosition.x - this.worldShift[0];
+    pos[1] = localPosition.y - this.worldShift[1];
+    //console.log("After World Shift: %s", p1);
+
+    pos[1] = - pos[1];
+
+    rotate(pos, - mapApartment.yawShift);
+    pos = add2(pos, mapApartment.pixelShift);
+    pos[0] *= mapApartment.scale;
+    pos[1] *= mapApartment.scale;
+
+    return pos;
+}
+
