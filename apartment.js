@@ -11,20 +11,21 @@ function Apartment(id, position, yaw, height) {
 
     this.layoutId = id;
     this.layoutRequest = new XMLHttpRequest();
-    this.layoutRequest.open("GET", "http://localhost:1080/rest/get/layoutMetadata/" + id);
+    this.layoutRequest.open("GET", "http://rbuch703.de:1080/rest/get/layoutMetadata/" + id);
     this.layoutRequest.responseType = "json";
     //this.layoutRequest.apartment = this;
     var aptTmp = this;
     this.layoutRequest.onreadystatechange = function() 
     { 
-        if (this.readyState != 4)
-        return;
-
-        if (this.response == null)
+        if (this.readyState != 4 || this.response == null)
             return;
 
         var tmp = aptTmp.loadLayout(this, position, yaw, height); 
+        aptTmp.metadata = this.response;
         aptTmp.processLayout(tmp);
+        
+        if (aptTmp.onLoaded)
+            aptTmp.onLoaded();
     }
     
     this.layoutRequest.send();
@@ -85,7 +86,7 @@ Apartment.prototype.requestTexture = function(layoutId, textureId)
 
     /*image.src = "tiles/tile_"+j+".png"; */
     image.crossOrigin = "anonymous";
-    image.src = "http://localhost:1080/rest/get/texture/"+layoutId+"/"+textureId;
+    image.src = "http://rbuch703.de:1080/rest/get/texture/"+layoutId+"/"+textureId;
 }
 			
 /**

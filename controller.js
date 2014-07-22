@@ -5,10 +5,10 @@
 
 var Controller = {
 
-    position: {},
+    position: {"lat": 0, "lng": 0},
     localPosition : { x:0, y:0, z: 1.5+10 }, //camera position in the local coordinate system ('z' is height)
-    viewAngleYaw : {},
-    viewAnglePitch : {},
+    viewAngleYaw : 0,
+    viewAnglePitch : 0,
 
 
     getEffectivePosition : function() 
@@ -263,6 +263,7 @@ var Controller = {
         
         this.updateTimeoutId = window.setTimeout( function() 
             {
+                /*
                 var url = document.URL;
                 if (url.indexOf("?") >= 0) // already contains a query string --> remove it
                     url = url.substring(0, url.indexOf("?"));
@@ -275,7 +276,7 @@ var Controller = {
                 url += Controller.buildQueryString(Controller.position.lat + Controller.localPosition.y / metersPerDegreeLat, 
                                                    Controller.position.lng + Controller.localPosition.x / metersPerDegreeLng );
 
-                history.replaceState(null, document.title, url);
+                history.replaceState(null, document.title, url);*/
             },1000);
     }
 }

@@ -142,17 +142,40 @@
     
     <script type="text/javascript">
     "use strict"
-    
-        
-    function init()
+  
+    //pasted from controller.js; FIXME: find better common place
+    function toDictionary (queryString)
     {
-        var idx;
-        Controller.initFromQueryString( (idx = document.URL.indexOf("?")) >= 0 ? 
-            document.URL.substring(idx + 1):
-            "lat=52.13376195&lng=11.63842729&yaw=0&pitch=0"
-            /*"lat=52.5184&lng=13.3725&yaw=104&pitch=10"*/); //default to a view of the Berlin Bundestag
+        var parts = queryString.split("&");
+        var res = {};
+        for (var i in parts)
+        {
+            var kv = parts[i].split("=");
+            if (kv.length == 2)
+            {
+                res[kv[0]] = parseFloat(kv[1]);
+            }
+        }
+        return res;
+    }
+
+
+
+
+    function offerMetadataLoaded(offer)
+    {
+        Controller.position = {"lat": offer.lat, "lng": offer.lon};
+        //educated guess (3m per level, plus 1m for basement part that is above ground
+        var apartmentFloorHeight = offer.level * 3.0 + 1.0;
+        Controller.localPosition.z =  apartmentFloorHeight+ 1.6; 
+        layoutId = offer.layoutId;
+        if (offer.yaw != null)
+            Controller.viewAngleYaw = parseFloat(offer.yaw);
+
+            
         Controller.onRequestFrameRender = scheduleFrameRendering;
-        map = L.map('mapDiv').setView([52.15, 11.63], 14); //global 
+        
+        map = L.map('mapDiv').setView([offer.lat, offer.lon], 16);
         map.on("click", onMapClick);
         map.on("zoomend", renderFrustum);
 
@@ -183,7 +206,35 @@
         document.addEventListener("keyup",   function(ev) {Controller.onKeyUp(ev);},  false);
 		document.body.onresize = onResize;
 
-        onChangeLocation();
+        mapApartment = new Apartment(offer.layoutId, Controller.position, /*-74.5*/0, apartmentFloorHeight);
+        mapApartment.onLoaded = onApartmentLoaded;
+        //onChangeLocation();
+        
+    }    
+        
+    function init()
+    {
+        var idx = document.URL.indexOf("?");
+        if (idx)
+        {
+            var params = toDictionary (document.URL.substring(idx + 1));
+            rowId = params.rowid ? parseInt(params.rowid) : 0;
+                
+        }
+
+        
+        var req = new XMLHttpRequest();
+        req.open("GET", "http://rbuch703.de:1080/rest/get/offer/" + rowId );
+        req.responseType = "json";
+        req.onreadystatechange = function() 
+        { 
+            if (this.readyState != 4 || this.response == null)
+                return;
+
+            offerMetadataLoaded( this.response);
+        }
+        
+        req.send();
 
 
     }   
@@ -198,7 +249,9 @@
     var mapFrustum;
     var gl;
     var positionMarker;
-    var fieldOfView = 45;
+    var fieldOfView = 90/16*9;
+    var layoutId;// = 158;
+    var rowId;
     
     
     function updatePositionMarker()
@@ -210,32 +263,31 @@
         positionMarker.addTo(map).bindPopup("You are here");
     }
     
-    function onChangeLocation()
+    function onApartmentLoaded()
     {
-        Controller.localPosition.x = 0;
+        /*Controller.localPosition.x = 0;
         Controller.localPosition.y = 0;
         
-        map.panTo(Controller.position);
+        Controller.position = mapApartment.position;*/
+        
+        /*map.panTo(Controller.position);
         if (map.getZoom() < 16)
-            map.setZoom(16);
+            map.setZoom(16);*/
 
-        var layoutId = 137;
-        mapApartment = new Apartment(layoutId, {lat:52.13376195, lng:11.63842729}, -74.5, 10);
         layoutImage = new Image();
         layoutImage.onload = function() {onResize(); renderMiniMap();};
-        layoutImage.src = "http://localhost:1080/rest/get/layout/"+ layoutId;
+        layoutImage.src = "http://rbuch703.de:1080/rest/get/layout/"+ layoutId;
         
         mapPlane = new MapLayer(gl, Controller.position);
         mapPlane.onProgress= scheduleFrameRendering;
 
-        
         mapBuildings = new Buildings(gl, Controller.position);
         mapBuildings.onLoaded = scheduleFrameRendering;
         
         
         updatePositionMarker();
         //console.log("Setting map center to %o", position);
-        Controller.updateHistoryState();
+        //Controller.updateHistoryState();
         renderFrustum();
         /* make sure the 3D view is visible when a user clicked on the map (as this is usually what the user wants
          * when he clicks on a map location. For the wide layout, the 3D view should align with the top of the screen ("true")
@@ -247,8 +299,8 @@
     
     function onMapClick(e)
     {
-        Controller.position = e.latlng;
-        onChangeLocation();
+        /*Controller.position = e.latlng;
+        onChangeLocation();*/
     }   
     
     var frameRenderingScheduled = false;
@@ -269,6 +321,9 @@
         if (Controller.keysStillPressed())
             Controller.updateKeyInteraction();
 
+        if (Controller.position.lat === undefined || Controller.position.lng === undefined)
+            return;
+            
         updatePositionMarker();
         renderFrustum();
         renderScene();
@@ -398,7 +453,7 @@
 	    ctx.drawImage(layoutImage, 0, 0, layoutImage.width * canvasScale, layoutImage.height * canvasScale);
 	    
 	    var pos = mapApartment.localToPixelCoordinates( Controller.localPosition );
-	    console.log(pos);
+	    //console.log(pos);
 	    pos[0] *= canvasScale;
 	    pos[1] *= canvasScale;
         ctx.lineWidth = 2;
@@ -463,12 +518,12 @@
 
 <div style="width:100%; height:100%">
 <div id="leftNavDiv" style="display: inline-block; width: 29%; height:100%; vertical-align:top">
-    <h2 style="">Open Street View</h2>
-    <div id="mapDiv" style=""> </div>
-
     <h4> Apartment Layout: </h4>    
 	<canvas id="minimapCanvas" style="width:100%" ></canvas>
-    
+
+    <h4> Neighborhood </h4>
+    <div id="mapDiv" style=""> </div>
+   
 </div>
 
 
