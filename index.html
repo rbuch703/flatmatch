@@ -78,6 +78,11 @@
 		    const float c = 0.02;
 
             vec3 vView = normalize( cameraPos - worldPosition); //direction vector from surface to camera (camera is always at (0,0,0) )
+            if (gl_FragCoord.z < 0.95)
+            {
+                discard;
+                return;
+            }
             float diffuse = abs( 0.5 * dot(vView, normal) );
 
             //gl_FragColor = vec4( (normal + 1.0)/2.0, 1.0);
@@ -136,6 +141,7 @@
 		precision mediump float;
 
 		void main(void) {
+		
             gl_FragColor = vec4(0.2, 0.2, 0.2, 1.0);
 		}
 	</script>	
@@ -171,6 +177,8 @@
         layoutId = offer.layoutId;
         if (offer.yaw != null)
             Controller.viewAngleYaw = parseFloat(offer.yaw);
+            
+        //addressLog.innerHTML = offer.address;
 
             
         Controller.onRequestFrameRender = scheduleFrameRendering;
@@ -206,7 +214,7 @@
         document.addEventListener("keyup",   function(ev) {Controller.onKeyUp(ev);},  false);
 		document.body.onresize = onResize;
 
-        mapApartment = new Apartment(offer.layoutId, Controller.position, /*-74.5*/0, apartmentFloorHeight);
+        mapApartment = new Apartment(offer.layoutId, Controller.position, offer.yaw != null ? offer.yaw : 0.0, apartmentFloorHeight);
         mapApartment.onLoaded = onApartmentLoaded;
         //onChangeLocation();
         
@@ -218,13 +226,13 @@
         if (idx)
         {
             var params = toDictionary (document.URL.substring(idx + 1));
-            rowId = params.rowid ? parseInt(params.rowid) : 0;
+            rowId = params.rowid ? parseInt(params.rowid) : 13;
                 
         }
 
         
         var req = new XMLHttpRequest();
-        req.open("GET", "http://rbuch703.de:1080/rest/get/offer/" + rowId );
+        req.open("GET", OFFER_REST_BASE_URL + "/get/offer/" + rowId );
         req.responseType = "json";
         req.onreadystatechange = function() 
         { 
@@ -252,7 +260,8 @@
     var fieldOfView = 90/16*9;
     var layoutId;// = 158;
     var rowId;
-    
+    const OFFER_REST_BASE_URL = "http://rbuch703.de:1080/rest"
+    //const OFFER_REST_BASE_URL = "http://localhost:1080/rest"
     
     function updatePositionMarker()
     {
@@ -276,7 +285,7 @@
 
         layoutImage = new Image();
         layoutImage.onload = function() {onResize(); renderMiniMap();};
-        layoutImage.src = "http://rbuch703.de:1080/rest/get/layout/"+ layoutId;
+        layoutImage.src = OFFER_REST_BASE_URL + "/get/layout/"+ layoutId;
         
         mapPlane = new MapLayer(gl, Controller.position);
         mapPlane.onProgress= scheduleFrameRendering;
@@ -299,6 +308,21 @@
     
     function onMapClick(e)
     {
+        /*var dLat = e.latlng.lat - Controller.position.lat;
+        var dLng = e.latlng.lng - Controller.position.lng;
+
+        var earthCircumference = 2 * Math.PI * (6378.1 * 1000);
+        var metersPerDegreeLat = earthCircumference / 360;
+        var metersPerDegreeLng = metersPerDegreeLat * Math.cos( Controller.position.lat / 180 * Math.PI);
+        
+        var dx = dLng * metersPerDegreeLng - Controller.localPosition.x;
+        var dy = dLat * metersPerDegreeLat - Controller.localPosition.y;
+        var dYaw = -(Math.atan2(dy, dx) / Math.PI * 180 - 90);
+        //console.log(e.latlng.lat, e.latlng.lng, dYaw);
+        yawLog.innerHTML = "./setApartmentYaw.py " + rowId + " " + dYaw.toFixed(1);
+        posLog.innerHTML = "./setApartmentPosition.py " + rowId + " " + e.latlng.lat + " " + e.latlng.lng;
+        */
+        
         /*Controller.position = e.latlng;
         onChangeLocation();*/
     }   
@@ -483,7 +507,7 @@
 	        
         var modelViewMatrix = glu.lookAt(Controller.viewAngleYaw, Controller.viewAnglePitch, Controller.localPosition);
 	    var projectionMatrix = mat4.create();
-	    mat4.perspective(projectionMatrix, fieldOfView/180*Math.PI, webGlCanvas.width / webGlCanvas.height, 0.1, 10000.0);
+	    mat4.perspective(projectionMatrix, fieldOfView/180*Math.PI, webGlCanvas.width / webGlCanvas.height, 0.2, 5000.0);
 
 
         var renderItems = [mapPlane, mapBuildings, mapSkyDome, mapApartment];
@@ -533,7 +557,9 @@
         <div style="font-size:80%; font-style:italic">
 The map and building geometry are &copy;OpenStreetMap contributors and are <a href="http://www.openstreetmap.org/copyright">licensed</a> under the Creative Commons BY-SA (map) and Open Database License (buildings) licenses.<br> For administrative questions on this page please contact the <a href="mailto:rbuch703@gmail.com">webmaster</a>.
         </div>
-
+<!--        <span id="yawLog" style="color:#FF0000">YAW</span><br>
+        <span id="posLog" style="color:#0000FF">LAT LNG</span><br><br>
+        <span id="addressLog" style="color:#777">Address</span><br> -->
 </div>
 </div>
 

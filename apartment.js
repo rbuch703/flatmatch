@@ -11,7 +11,7 @@ function Apartment(id, position, yaw, height) {
 
     this.layoutId = id;
     this.layoutRequest = new XMLHttpRequest();
-    this.layoutRequest.open("GET", "http://rbuch703.de:1080/rest/get/layoutMetadata/" + id);
+    this.layoutRequest.open("GET", OFFER_REST_BASE_URL + "/get/layoutMetadata/" + id);
     this.layoutRequest.responseType = "json";
     //this.layoutRequest.apartment = this;
     var aptTmp = this;
@@ -64,7 +64,11 @@ Apartment.prototype.render = function(modelViewMatrix, projectionMatrix)
 			
 			
 Apartment.prototype.handleLoadedTexture = function(image) {
-    this.textures[ image.id] = glu.createTexture( image );
+
+    if (this.textures[ image.id])
+        gl.deleteTexture(this.textures[ image.id ] );
+        
+    this.textures[ image.id ] = glu.createTexture( image );
     if (Controller.onRequestFrameRender)
         Controller.onRequestFrameRender();
 }
@@ -76,6 +80,20 @@ Apartment.prototype.handleLoadedTexture = function(image) {
  *               over and over again */
 Apartment.prototype.requestTexture = function(layoutId, textureId)
 {
+    var canvas = document.createElement('canvas');
+    canvas.width  = 1;
+    canvas.height = 1;
+    var ctx = canvas.getContext("2d");
+    
+    var l = Math.floor((Math.random() * 256)).toString(16);
+    ctx.fillStyle = "#"+l+l+l;
+    //console.log("#"+r+g+b, ctx.fillStyle);
+    
+    ctx.fillRect( 0, 0, 1, 1 );    
+
+    this.textures[ textureId] = glu.createTexture( canvas );
+
+
     var image = new Image();
     image.id = textureId;
     image.apartment = this;
@@ -86,7 +104,7 @@ Apartment.prototype.requestTexture = function(layoutId, textureId)
 
     /*image.src = "tiles/tile_"+j+".png"; */
     image.crossOrigin = "anonymous";
-    image.src = "http://rbuch703.de:1080/rest/get/texture/"+layoutId+"/"+textureId;
+    image.src = OFFER_REST_BASE_URL + "/get/texture/" + layoutId + "/" + textureId;
 }
 			
 /**
