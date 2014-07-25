@@ -166,6 +166,23 @@
     }
 
 
+    //copied from helper.js; TODO. find better shared location
+    function getFloorName( level)
+    {
+        if (level == 0) return "Erdgeschoss";
+        if (level > 0) return level + ". Etage";
+        if (level < 0) return level + ". Untergeschoss";
+    }
+
+    //copied from helper.js; TODO. find better shared location
+    function asPriceString( val)
+    {
+        var tmp = Math.floor(val * 100);
+        var res = Math.floor(tmp / 100);
+        tmp = tmp % 100;
+        if (tmp < 10) tmp = "0" + tmp;
+        return res + "," + tmp + " €";
+    }
 
 
     function offerMetadataLoaded(offer)
@@ -178,6 +195,12 @@
         if (offer.yaw != null)
             Controller.viewAngleYaw = parseFloat(offer.yaw);
             
+        lblAddress.innerHTML = offer.address;
+        lblLevel.innerHTML = getFloorName(offer.level);
+        lblSize.innerHTML = offer.area + "m²";
+        lblRooms.innerHTML = offer.numRooms;
+        lblRent.innerHTML = asPriceString(offer.rent);
+        lblDetails.innerHTML = "<a target='_blank' href='http://www.wobau-magdeburg.de/"+ offer.detailsUrl + "'>[in neuem Tab]</a>"
         //addressLog.innerHTML = offer.address;
 
             
@@ -187,9 +210,9 @@
         map.on("click", onMapClick);
         map.on("zoomend", renderFrustum);
 
-        L.tileLayer('http://{s}.tile.rbuch703.de/osm/{z}/{x}/{y}.png', {
+        L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: 'OpenStreetMap',
-            maxZoom: 20, minZoom:0
+            maxZoom: 19, minZoom:0
         }).addTo(map);
 
         L.control.scale({imperial:false, position:"topright"}).addTo(map);
@@ -260,7 +283,7 @@
     var fieldOfView = 90/16*9;
     var layoutId;// = 158;
     var rowId;
-    const OFFER_REST_BASE_URL = "http://rbuch703.de:1080/rest"
+    /*const*/var OFFER_REST_BASE_URL = "http://rbuch703.de:1080/rest";
     //const OFFER_REST_BASE_URL = "http://localhost:1080/rest"
     
     function updatePositionMarker()
@@ -419,7 +442,7 @@
 	        contentDiv.removeChild(webGlCanvas);
 			return;
 		}
-		gl = WebGLDebugUtils.makeDebugContext(gl);
+		//gl = WebGLDebugUtils.makeDebugContext(gl);
 		
 		gl.clearColor(0.5, 0.5, 0.5, 1.0);
 
@@ -472,28 +495,31 @@
 	        minimapCanvas.context2d = minimapCanvas.getContext("2d");
 
         var ctx = minimapCanvas.context2d;
-
+        ctx.clearRect ( 0 , 0 , minimapCanvas.width , minimapCanvas.height );
 	    var canvasScale = Math.min( minimapCanvas.width / layoutImage.width, minimapCanvas.height / layoutImage.height);
+	    ctx.globalAlpha = 0.5;
 	    ctx.drawImage(layoutImage, 0, 0, layoutImage.width * canvasScale, layoutImage.height * canvasScale);
+	    ctx.globalAlpha = 1.0;
 	    
 	    var pos = mapApartment.localToPixelCoordinates( Controller.localPosition );
 	    //console.log(pos);
 	    pos[0] *= canvasScale;
 	    pos[1] *= canvasScale;
+        var RADIUS = minimapCanvas.width / 60;
+
         ctx.lineWidth = 2;
         ctx.strokeStyle = "#44D";
         ctx.beginPath();
-        ctx.arc(pos[0], pos[1], 5, 0, 2 * Math.PI);
+        ctx.arc(pos[0], pos[1], RADIUS, 0, 2 * Math.PI);
         ctx.stroke();
 
         var effYaw = Controller.viewAngleYaw - mapApartment.yawShift;
         effYaw = effYaw / 180 * Math.PI;
         var lookDir = [Math.sin(effYaw), Math.cos(effYaw) ];
-        
         ctx.strokeStyle = "#D44";
         ctx.beginPath();
         ctx.moveTo( pos[0], pos[1]);
-        ctx.lineTo( pos[0] + 10 * lookDir[0], pos[1] - 10 * lookDir[1]);
+        ctx.lineTo( pos[0] + 2*RADIUS * lookDir[0], pos[1] - 2*RADIUS * lookDir[1]);
         ctx.stroke();
 
 	}
@@ -543,7 +569,7 @@
 <div style="width:100%; height:100%">
 <div id="leftNavDiv" style="display: inline-block; width: 29%; height:100%; vertical-align:top">
     <h4> Apartment Layout: </h4>    
-	<canvas id="minimapCanvas" style="width:100%" ></canvas>
+	<canvas id="minimapCanvas" style="width:100%; border: 1px solid black" ></canvas>
 
     <h4> Neighborhood </h4>
     <div id="mapDiv" style=""> </div>
@@ -556,6 +582,19 @@
 		<canvas id="webGlCanvas" style="width:100%; background:black" ></canvas>
         <div style="font-size:80%; font-style:italic">
 The map and building geometry are &copy;OpenStreetMap contributors and are <a href="http://www.openstreetmap.org/copyright">licensed</a> under the Creative Commons BY-SA (map) and Open Database License (buildings) licenses.<br> For administrative questions on this page please contact the <a href="mailto:rbuch703@gmail.com">webmaster</a>.
+        </div>
+        
+        <div style="padding-left:20px; padding-top: 20px">
+        <h3>Angebotsinformationen</h3>
+        <table>
+            <tr><td style="font-weight:bold">Anschrift:</td><td id="lblAddress"></td></tr>
+            <tr><td style="font-weight:bold">Anzahl Zimmer:</td><td id="lblRooms"></td></tr>
+            <tr><td style="font-weight:bold">Größe:</td><td id="lblSize"></td></tr>
+            <tr><td style="font-weight:bold">Etage:</td><td id="lblLevel"></td></tr>
+            <tr><td style="font-weight:bold">Kaltmiete+Nebenkosten:</td><td id="lblRent"></td></tr>
+            <tr><td style="font-weight:bold">weitere Informationen</td><td id="lblDetails"></td></tr>
+            
+        </table>
         </div>
 <!--        <span id="yawLog" style="color:#FF0000">YAW</span><br>
         <span id="posLog" style="color:#0000FF">LAT LNG</span><br><br>

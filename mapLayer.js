@@ -11,7 +11,7 @@ function MapLayer(gl, position) {
 }
 
 MapLayer.MIN_ZOOM = 12; //experimentally tested: everything beyond level 12 is beyond the far plane
-MapLayer.MAX_ZOOM = 20;
+MapLayer.MAX_ZOOM = 19;
 
 MapLayer.prototype.createTilesRecursive = function(tileX, tileY, level, maxDistance, hasRenderedParent, tileListOut)
 {
