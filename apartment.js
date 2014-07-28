@@ -182,7 +182,7 @@ Apartment.prototype.loadLayout = function(request, position, yaw, height)
     var segments = [];
     this.scale = request.response.scale;
     this.startingPos = request.response.geometry.startingPosition;
-    this.startingPos[2] = height + 1.6;
+    this.startingPos[2] = 0;
     var rectangles = request.response.geometry.geometry;
 
     for (var i in rectangles)
@@ -207,7 +207,6 @@ Apartment.prototype.loadLayout = function(request, position, yaw, height)
     }    
     this.startingPos[0] -= mid_x;
     this.startingPos[1] -= mid_y;
-    
    
     //step 3: rotate apartment;
     //console.log("apartment yaw is %s", yaw);
@@ -218,6 +217,7 @@ Apartment.prototype.loadLayout = function(request, position, yaw, height)
         rotate( segments[i].height, yaw);
     }
     rotate( this.startingPos, yaw);
+    this.startingPos[1] = - this.startingPos[1];
     
     this.yawShift = yaw;
     
