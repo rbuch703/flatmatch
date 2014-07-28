@@ -20,7 +20,7 @@ function Apartment(id, position, yaw, height) {
         if (this.readyState != 4 || this.response == null)
             return;
 
-        var tmp = aptTmp.loadLayout(this, position, yaw, height); 
+        var tmp = aptTmp.loadLayout(this, position, yaw, height);
         aptTmp.metadata = this.response;
         aptTmp.processLayout(tmp);
         
@@ -181,27 +181,13 @@ Apartment.prototype.loadLayout = function(request, position, yaw, height)
 
     var segments = [];
     this.scale = request.response.scale;
-    var rectangles = request.response.geometry;
-    // json geometry already has the correct x/y scale, 
-    // but is stored in [cm] while we need it in [m];
-    var scaling = 1/100.0;  
+    this.startingPos = request.response.geometry.startingPosition;
+    this.startingPos[2] = height + 1.6;
+    var rectangles = request.response.geometry.geometry;
+
     for (var i in rectangles)
     {
-        //console.log(rectangles[i]);
-        rectangles[i].pos[0] *= scaling;
-        rectangles[i].pos[1] *= scaling;
-        rectangles[i].pos[2] *= scaling;
-        
-        rectangles[i].width[0] *= scaling;
-        rectangles[i].width[1] *= scaling;
-        rectangles[i].width[2] *= scaling;
-
-        rectangles[i].height[0] *= scaling;
-        rectangles[i].height[1] *= scaling;
-        rectangles[i].height[2] *= scaling;
-
         rectangles[i].pos[2] += height;
-        
         segments.push(rectangles[i]);
 
     }
@@ -219,6 +205,8 @@ Apartment.prototype.loadLayout = function(request, position, yaw, height)
         segments[i].pos[0] -= mid_x;
         segments[i].pos[1] -= mid_y;
     }    
+    this.startingPos[0] -= mid_x;
+    this.startingPos[1] -= mid_y;
     
    
     //step 3: rotate apartment;
@@ -228,7 +216,8 @@ Apartment.prototype.loadLayout = function(request, position, yaw, height)
         rotate( segments[i].pos, yaw);
         rotate( segments[i].width, yaw);
         rotate( segments[i].height, yaw);
-    }    
+    }
+    rotate( this.startingPos, yaw);
     
     this.yawShift = yaw;
     
@@ -247,7 +236,9 @@ Apartment.prototype.loadLayout = function(request, position, yaw, height)
         //FIXME: why do those signs have to be different?
         segments[i].pos[0] += dx;
         segments[i].pos[1] -= dy;
-    }    
+    }
+    this.startingPos[0] +=dx;
+    this.startingPos[1] -=dy;
 
     return segments;
 }

@@ -283,8 +283,8 @@
     var fieldOfView = 90/16*9;
     var layoutId;// = 158;
     var rowId;
-    /*const*/var OFFER_REST_BASE_URL = "http://rbuch703.de:1080/rest";
-    //const OFFER_REST_BASE_URL = "http://localhost:1080/rest"
+    //var OFFER_REST_BASE_URL = "http://rbuch703.de:1080/rest";
+    var OFFER_REST_BASE_URL = "http://localhost:1080/rest"
     
     function updatePositionMarker()
     {
@@ -297,10 +297,8 @@
     
     function onApartmentLoaded()
     {
-        /*Controller.localPosition.x = 0;
-        Controller.localPosition.y = 0;
-        
-        Controller.position = mapApartment.position;*/
+        Controller.localPosition.x = mapApartment.startingPos[0];
+        Controller.localPosition.y = mapApartment.startingPos[1];
         
         /*map.panTo(Controller.position);
         if (map.getZoom() < 16)
@@ -320,13 +318,14 @@
         updatePositionMarker();
         //console.log("Setting map center to %o", position);
         //Controller.updateHistoryState();
-        renderFrustum();
+        //renderFrustum();
         /* make sure the 3D view is visible when a user clicked on the map (as this is usually what the user wants
          * when he clicks on a map location. For the wide layout, the 3D view should align with the top of the screen ("true")
          * to show the whole 3D view. For the narrow layout, the 3D view is the last important part on the page and should
          * align with the bottom of the page to allow the map to be shown above. */
         
         webGlCanvas.scrollIntoView( narrowLayout ? !narrowLayout.matches : true);
+        scheduleFrameRendering();
     }
     
     function onMapClick(e)
