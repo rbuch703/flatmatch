@@ -82,6 +82,26 @@ glu.lookAt = function(yaw, pitch, translate)
 
 }
 
+
+glu.setMaxAnisotropy = function()
+{
+    if (!gl) return;
+    
+    if (glu.anisotropyExtension === undefined)
+        glu.anisotropyExtension = gl.getExtension("EXT_texture_filter_anisotropic");
+        
+    if (! glu.anisotropyExtension) return;
+    
+    if (glu.anisotropyExtension.MAX_TEXTURE_MAX_ANISOTROPY_EXT === undefined)
+        glu.anisotropyExtension.MAX_TEXTURE_MAX_ANISOTROPY_EXT = gl.getParameter(glu.anisotropyExtension.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
+
+    if (glu.anisotropyExtension)
+        gl.texParameterf(gl.TEXTURE_2D, glu.anisotropyExtension.TEXTURE_MAX_ANISOTROPY_EXT, glu.anisotropyExtension.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
+    
+}
+
+
+
 glu.createTexture = function(image)
 {
     var texId = gl.createTexture();
@@ -90,20 +110,13 @@ glu.createTexture = function(image)
     gl.bindTexture(gl.TEXTURE_2D, texId);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image); //load texture data
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);                  //set zoom-in filter to linear interpolation
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);    //set zoom-out filter to linear interpolation between pixels and mipmap levels
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);    //set zoom-out filter to linear interpolation between pixels and between mipmap levels
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); // texCords are clamped 
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); // to range [0..1]
     gl.generateMipmap(gl.TEXTURE_2D);                                     // automatic mipmap generation
     
-    // enable anisotropic filtering for this texture if available.
-    // without anisotrophy, textures on quads close to parallel to the view direction
-    // would appear extremely blurry
-    var ext = gl.getExtension("EXT_texture_filter_anisotropic"); //check for anisotropy support
-    if (ext && ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT)
-    {
-        var max_anisotropy = gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
-        gl.texParameterf(gl.TEXTURE_2D, ext.TEXTURE_MAX_ANISOTROPY_EXT, max_anisotropy);
-    }
+    glu.setMaxAnisotropy();
+    
     return texId;
 }
 
