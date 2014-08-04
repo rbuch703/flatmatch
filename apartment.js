@@ -78,8 +78,21 @@ Apartment.prototype.handleLoadedTexture = function(image) {
  *               the 'texture' and "j" variable would be shared between all 
  *               loop iterations, leading to the same texture being loaded 
  *               over and over again */
-Apartment.prototype.requestTexture = function(layoutId, textureId)
+Apartment.prototype.requestTexture = function(layoutId, textureId, segmentData)
 {
+
+    //if texture was send as part of JSON geometry data, use it directly
+    if (segmentData.texture !== undefined)
+    {
+        var image = new Image();
+        image.id = textureId;
+        image.apartment = this;
+        image.onload = function() { this.apartment.handleLoadedTexture(image); };
+        image.src = "data:image/png;base64," + segmentData.texture;
+        return;        
+    }
+
+
     var canvas = document.createElement('canvas');
     canvas.width  = 1;
     canvas.height = 1;
@@ -98,9 +111,7 @@ Apartment.prototype.requestTexture = function(layoutId, textureId)
     image.id = textureId;
     image.apartment = this;
 
-    image.onload = function() {
-      this.apartment.handleLoadedTexture(image)
-    }
+    image.onload = function() { this.apartment.handleLoadedTexture(image); };
 
     /*image.src = "tiles/tile_"+j+".png"; */
     image.crossOrigin = "anonymous";
@@ -140,7 +151,7 @@ Apartment.prototype.processLayout = function(segments)
     this.texCoords= glu.createArrayBuffer(this.texCoords);
     
     for (var i = 0; i < this.numVertices/6; i++) {
-        this.requestTexture(this.layoutId, i);
+        this.requestTexture(this.layoutId, i, segments[i]);
     }
 	
     //renderScene();
