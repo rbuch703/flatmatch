@@ -206,7 +206,7 @@
             
         Controller.onRequestFrameRender = scheduleFrameRendering;
         
-        map = L.map('mapDiv').setView([offer.lat, offer.lon], 16);
+        map = L.map('mapDiv', {keyboard:false} ).setView([offer.lat, offer.lon], 18);
         map.on("click", onMapClick);
         map.on("zoomend", renderFrustum);
 
@@ -218,11 +218,15 @@
         L.control.scale({imperial:false, position:"topright"}).addTo(map);
 	    initGl();  //initialize webGL canvas
 
+        /* prevention of default event handling is required for:
+         * - 'mousedown': otherwise dragging the mouse cursor beyond the canvas would select the page text in chrome
+         * - 'keydown': otherwise using the cursor keys for navigation would also scroll the page
+         */
 
         if (gl)
         {
 		    //register event handlers
-		    webGlCanvas.addEventListener("mousedown",   function(ev) {Controller.onMouseDown(ev);}, false);
+		    webGlCanvas.addEventListener("mousedown",   function(ev) {ev.preventDefault(); Controller.onMouseDown(ev);}, false);
 		    webGlCanvas.addEventListener("mouseup",     function(ev) {Controller.onMouseUp(ev);},   false);
 		    webGlCanvas.addEventListener("mouseout",    function(ev) {Controller.onMouseUp(ev);},   false);
 		    webGlCanvas.addEventListener("mousemove",   function(ev) {Controller.onMouseMove(ev);}, false);
@@ -233,7 +237,7 @@
             webGlCanvas.addEventListener("touchmove",   function(ev) {Controller.onTouchMove(ev);}, false);
         }
 
-        document.addEventListener("keydown", function(ev) {Controller.onKeyDown(ev);},  false);
+        document.addEventListener("keydown", function(ev) { if (ev.keyCode == 38 || ev.keyCode == 40) ev.preventDefault(); Controller.onKeyDown(ev);},  false);
         document.addEventListener("keyup",   function(ev) {Controller.onKeyUp(ev);},  false);
 		document.body.onresize = onResize;
 
@@ -606,3 +610,4 @@ The map and building geometry are &copy;OpenStreetMap contributors and are <a hr
 
 
 </html>
+
