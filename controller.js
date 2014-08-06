@@ -1,6 +1,11 @@
 "use strict"    
 
-
+function getSign(pos, neg)
+{
+    if (pos && (!neg)) return  1;
+    if (neg && (!pos)) return -1;
+    return 0;
+}
 
 
 var Controller = {
@@ -86,21 +91,15 @@ var Controller = {
 	keysDown: {},
 	
 	lastKeyEventProcessed: null,
-	
-	updateKeyInteraction: function()
-	{
-        var now = new Date().getTime();
 
-        if (this.lastKeyEventProcessed === null)
-        {
-            this.lastKeyEventProcessed = now;
-            return;
-        }
-
-        
-        var dt = now - this.lastKeyEventProcessed;
-        this.lastKeyEventProcessed = now;
-        
+    turn: function(yaw, pitch)
+    {
+        this.viewAngleYaw += yaw;
+        this.viewAnglePitch += pitch;
+    },
+    
+    move: function(dx, dy)
+    {
         var arc = this.viewAngleYaw / 180 * Math.PI;
         var forwardX = Math.sin(arc);
         var forwardY = Math.cos(arc);
@@ -108,11 +107,43 @@ var Controller = {
         var rightX = Math.sin(arc + Math.PI/2.0);
         var rightY = Math.cos(arc + Math.PI/2.0);
         
-        if (this.keysDown.D) { this.localPosition.x += rightX * dt/400; this.localPosition.y += rightY * dt/400;};
-        if (this.keysDown.A) { this.localPosition.x -= rightX * dt/400; this.localPosition.y -= rightY * dt/400;};
+        this.localPosition.x += dx*rightX;
+        this.localPosition.y += dx*rightY;
+        
+        this.localPosition.x += dy*forwardX;
+        this.localPosition.y += dy*forwardY;
+   
+    },
+	
+	updateKeyInteraction: function()
+	{
+        var now = new Date().getTime();
+        var dt = now - this.lastKeyEventProcessed;
+        this.lastKeyEventProcessed = now;
 
-        if (this.keysDown.W) { this.localPosition.x += forwardX * dt/400; this.localPosition.y +=forwardY * dt/400;}
-        if (this.keysDown.S) { this.localPosition.x -= forwardX * dt/400; this.localPosition.y -=forwardY * dt/400;}
+        if (this.lastKeyEventProcessed === null)
+        {
+            this.lastKeyEventProcessed = now;
+            return;
+        }
+
+
+        var dy = dt/400 * getSign(("W" in this.keysDown) || ("up" in this.keysDown), 
+                                  ("S" in this.keysDown) || ("down" in this.keysDown));
+                                  
+        var dx = dt/400 * getSign( "D" in this.keysDown, "A" in this.keysDown);
+
+        this.move(dx, dy);
+
+        
+        var turnX = dt/10 * getSign( "right" in this.keysDown, "left" in this.keysDown );
+
+        var turnY = 0;
+        if (this.keysStillPressed() && this.down != "mouse" && Math.abs(this.viewAnglePitch) > 1)
+            turnY = (this.viewAnglePitch < 0 ? 1 : -1) * dt/40;
+
+        this.turn(turnX, turnY);
+
         
         this.updateHistoryState();
 	},
@@ -124,7 +155,6 @@ var Controller = {
     
 	onKeyDown: function(evt) 
 	{
-        //console.log("Key event: key %s", evt.keyCode);
         var key = null;
         switch (evt.keyCode)
         {
@@ -133,6 +163,11 @@ var Controller = {
             case 68: key = "D"; break;
             case 83: key = "S"; break;
             case 87: key = "W"; break;
+            case 37: key = "left"; break;
+            case 38: key = "up"; break;
+            case 39: key = "right";break;
+            case 40: key = "down"; break;
+
         }
         
         if (key in this.keysDown) //is just a reoccuring event for a key that is still pressed
@@ -151,14 +186,17 @@ var Controller = {
 
 	onKeyUp: function(evt)
 	{
-        //console.log("Key event: key %s", evt.keyCode);
         switch (evt.keyCode)
         {
             
-            case 65: delete this.keysDown.A; break;
-            case 68: delete this.keysDown.D; break;
-            case 83: delete this.keysDown.S; break;
-            case 87: delete this.keysDown.W; break;
+            case 65: delete this.keysDown.A;     break;
+            case 68: delete this.keysDown.D;     break;
+            case 83: delete this.keysDown.S;     break;
+            case 87: delete this.keysDown.W;     break;
+            case 37: delete this.keysDown.left;  break;
+            case 38: delete this.keysDown.up;    break;
+            case 39: delete this.keysDown.right; break;
+            case 40: delete this.keysDown.down;  break;
         }
     },
     
@@ -167,28 +205,9 @@ var Controller = {
         return Object.keys(this.keysDown).length > 0;
     },
 	
-	updateViewDirection: function(dx, dy)
-	{
-        this.viewAngleYaw += dx/5 ;
-        this.viewAnglePitch += dy/ 5;
-        if (this.viewAnglePitch > 180)
-            this.viewAnglePitch -= 180;
-        
-        if (this.viewAnglePitch < -60)
-            this.viewAnglePitch = -60;
-            
-        if (this.viewAnglePitch > 60)
-            this.viewAnglePitch = 60;
-        /*localPosition.x += dx/100;
-        localPosition.y += dy/100;*/
-
-        this.updateHistoryState();
-        if (this.onRequestFrameRender)
-            this.onRequestFrameRender();
-	},
-	
     onMouseMove: function(e)
 	{
+	    //e.preventDefault();
         if (this.down != "mouse" ) return;
         var dx = e.clientX - this.x;
         var dy = e.clientY - this.y;
@@ -196,8 +215,12 @@ var Controller = {
         this.x = e.clientX;
         this.y = e.clientY;
 
-        //console.log("mouse move this: %s, %o", this, this);
-        this.updateViewDirection(dx, dy);
+        this.turn(dx / 5.0, dy / 5.0);
+        
+        this.updateHistoryState();
+        if (this.onRequestFrameRender)
+            this.onRequestFrameRender();
+
 	},
 
     getTouchData: function(touches, identifier)
@@ -236,18 +259,20 @@ var Controller = {
     
         ev.preventDefault();
         var touch = this.getTouchData(ev.changedTouches, this.down);
-        if (touch)
-        {
-            var dx = touch.clientX - this.x;
-            var dy = touch.clientY - this.y;
-
-            /*if (Math.abs(dx) < 5 && Math.abs(dy) < 5)
-                return;*/
-            this.x = touch.clientX;
-            this.y = touch.clientY;
-            this.updateViewDirection(dx, dy);
+        if (!touch)
+            return;
             
-        }
+        var dx = touch.clientX - this.x;
+        var dy = touch.clientY - this.y;
+
+        this.x = touch.clientX;
+        this.y = touch.clientY;
+        this.move(0,        -dy / 100.0);
+        this.turn(dx / 5.0, 0       );
+
+        this.updateHistoryState();
+        if (this.onRequestFrameRender)
+            this.onRequestFrameRender();
     },
     
    
