@@ -42,9 +42,9 @@ function Tile( tileX, tileY, level, shaderProgram, mapLayer)
     var v3 = [ x2, y2, 0 ];
     var v4 = [ x1, y2, 0 ];
 
-    var vertexData = v1.concat(v4, v3, v2);
+    var vertexData = [].concat(v1, v4, v3, v1, v3, v2);
     this.vertices =  glu.createArrayBuffer(vertexData);
-    this.texCoords = glu.createArrayBuffer([0,0,  0,1,  1,1,  1,0]);
+    this.texCoords = glu.createArrayBuffer([0,0,  0,1,  1,1,  0,0,  1,1,  1,0]);
     
     
     
@@ -78,7 +78,7 @@ Tile.prototype.render = function(modelViewMatrix, projectionMatrix)
     gl.polygonOffset(MapLayer.MAX_ZOOM - this.level + 1, MapLayer.MAX_ZOOM - this.level + 1);
 
     gl.bindTexture(gl.TEXTURE_2D, this.texId); //render geometry using texture "tex" in texture unit 0
-	gl.drawArrays(gl.TRIANGLE_FAN, 0, 4);
+	gl.drawArrays(gl.TRIANGLES, 0, 6);
     gl.disable(gl.POLYGON_OFFSET_FILL);
 }
 

@@ -215,7 +215,7 @@ var Controller = {
         this.x = e.clientX;
         this.y = e.clientY;
 
-        this.turn(dx / 5.0, dy / 5.0);
+        this.turn(dx / 5.0, - dy / 5.0);
         
         this.updateHistoryState();
         if (this.onRequestFrameRender)

@@ -12,7 +12,7 @@ function Apartment(id, position, yaw, height) {
     this.layoutId = id;
     this.layoutRequest = new XMLHttpRequest();
     this.layoutRequest.open("GET", OFFER_REST_BASE_URL + "/get/layoutMetadata/" + id);
-    this.layoutRequest.responseType = "json";
+    this.layoutRequest.responseType = "";
     //this.layoutRequest.apartment = this;
     var aptTmp = this;
     this.layoutRequest.onreadystatechange = function() 
@@ -20,7 +20,7 @@ function Apartment(id, position, yaw, height) {
         if (this.readyState != 4 || this.response == null)
             return;
 
-        var tmp = aptTmp.loadLayout(this, position, yaw, height);
+        var tmp = aptTmp.loadLayout( JSON.parse(this.response), position, yaw, height);
         aptTmp.metadata = this.response;
         aptTmp.processLayout(tmp);
         
@@ -185,16 +185,16 @@ function getAABB( segments)
 }
 
 
-Apartment.prototype.loadLayout = function(request, position, yaw, height)
+Apartment.prototype.loadLayout = function(responseJson, position, yaw, height)
 {
         
     //console.log("request: %o", request);
 
     var segments = [];
-    this.scale = request.response.scale;
-    this.startingPos = request.response.geometry.startingPosition;
+    this.scale = responseJson.scale;
+    this.startingPos = responseJson.geometry.startingPosition;
     this.startingPos[2] = 0;
-    var rectangles = request.response.geometry.geometry;
+    var rectangles = responseJson.geometry.geometry;
 
     for (var i in rectangles)
     {

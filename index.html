@@ -93,6 +93,33 @@
 
 		}
 	</script>
+
+    <!-- As of version 11, Internet Explorer apparently does not support the "discard" keyword (error WEBGL11102),
+         So we have to provide a shader version without it-->
+	<script id="building-shader-fs-ie" type="x-shader/x-fragment">
+		precision mediump float;
+        varying vec3 texCoordV;
+        varying vec3 normal;
+        varying vec3 worldPosition;
+        
+        uniform sampler2D tex;
+        uniform vec3 cameraPos;
+        //uniform float height;
+		void main(void) {
+		    const float c = 0.02;
+
+            vec3 vView = normalize( cameraPos - worldPosition); //direction vector from surface to camera (camera is always at (0,0,0) )
+            float diffuse = abs( 0.5 * dot(vView, normal) );
+
+            //gl_FragColor = vec4( (normal + 1.0)/2.0, 1.0);
+            gl_FragColor = diffuse > 0.0 ? vec4( vec3(diffuse+0.3), 1.0): vec4(-diffuse+0.3, 0.0, 0.0, 1.0);
+            
+            if (texCoordV.z == 0.0) //HACK: z==0 --> building height was just guessed --> tint it red
+                gl_FragColor = gl_FragColor * vec4(1.0, 0.9, 0.95, 1.0);
+
+		}
+	</script>
+
 	
 	<script id="shader-vs" type="x-shader/x-vertex">
 		attribute vec3 vertexPosition;
@@ -260,13 +287,13 @@
         
         var req = new XMLHttpRequest();
         req.open("GET", OFFER_REST_BASE_URL + "/get/offer/" + rowId );
-        req.responseType = "json";
+        req.responseType = "";
         req.onreadystatechange = function() 
         { 
             if (this.readyState != 4 || this.response == null)
                 return;
 
-            offerMetadataLoaded( this.response);
+            offerMetadataLoaded( JSON.parse(this.response) );
         }
         
         req.send();
@@ -287,8 +314,8 @@
     var fieldOfView = 90/16*9;
     var layoutId;// = 158;
     var rowId;
-    //var OFFER_REST_BASE_URL = "http://rbuch703.de:1080/rest";
-    var OFFER_REST_BASE_URL = "http://localhost:1080/rest"
+    var OFFER_REST_BASE_URL = "http://rbuch703.de:1080/rest";
+    //var OFFER_REST_BASE_URL = "http://localhost:1080/rest"
     
     function updatePositionMarker()
     {

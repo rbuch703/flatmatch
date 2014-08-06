@@ -37,9 +37,12 @@ function Buildings(gl, position)
     oReq.open("get", Buildings.apiBaseUrl + "?data=" + encodeURIComponent(query), true);
     oReq.send();
     
+    var fragmentShader = navigator.userAgent.indexOf("Trident") > -1 ? 
+        document.getElementById("building-shader-fs-ie").text :
+        document.getElementById("building-shader-fs"   ).text;
     
     this.shaderProgram = glu.createShader(document.getElementById("building-shader-vs").text,
-                                          document.getElementById("building-shader-fs").text,
+                                          fragmentShader,
                                           ["vertexPosition","vertexTexCoords", "vertexNormal"],
                                           ["modelViewProjectionMatrix", "tex", "cameraPos"]);
                                           
@@ -443,10 +446,7 @@ Buildings.parseOSMQueryResult = function(res) {
     
     for (var i in relations)
     {
-
         var rel = relations[i];
-        //console.log(rel.id, rel.tags, rel);
-
         Buildings.mergeMultiPolygonSegments( rel, relations );
         Buildings.distributeAttributes( rel );
         
