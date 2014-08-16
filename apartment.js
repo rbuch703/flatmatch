@@ -39,6 +39,13 @@ Apartment.prototype.render = function(modelViewMatrix, projectionMatrix)
     var mvpMatrix = mat4.create();
     mat4.mul(mvpMatrix, projectionMatrix, modelViewMatrix);
 
+    //As this tool is an apartment viewer, no other geometry is supposed to intersect with the apartment.
+    //However, sometimes building geometry does intersect with the apartment geometry when the apartment is
+    //ill-placed within the buiding.
+    //Clearing the depth buffer before rendering the apartment ensures that this intersecting building geometry
+    //Will be drawn over and this helps masking geometrical errors
+	gl.clear(gl.DEPTH_BUFFER_BIT);
+
 	gl.useProgram(this.shaderProgram);   //    Install the program as part of the current rendering state
 	gl.uniformMatrix4fv(this.shaderProgram.locations.modelViewProjectionMatrix, false, mvpMatrix);
 
