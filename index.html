@@ -16,7 +16,7 @@
     <link   type="text/css" rel="stylesheet" href="styles/leaflet.css" />
 
     <style>
-        #mapDiv { width:100%; height:40%;}
+        #mapDiv { width:100%; height:400px;}
     /*
         @media (min-width: 1440px) {
               #leftNavDiv { float:left; margin-right:20px; width:400px}
@@ -66,13 +66,23 @@
 		}
 	</script>
 
+	<script id="sun-shader-fs" type="x-shader/x-fragment">
+		precision mediump float;
+        varying vec2 texCoordV;
+        uniform sampler2D tex;
+		void main(void) {
+            gl_FragColor = vec4( 1.0, 1.0, 0.95, 1.0);
+		}
+	</script>
+
+
+
 	<script id="building-shader-fs" type="x-shader/x-fragment">
 		precision mediump float;
         varying vec3 texCoordV;
         varying vec3 normal;
         varying vec3 worldPosition;
         
-        uniform sampler2D tex;
         uniform vec3 cameraPos;
         //uniform float height;
 		void main(void) {
@@ -103,7 +113,6 @@
         varying vec3 normal;
         varying vec3 worldPosition;
         
-        uniform sampler2D tex;
         uniform vec3 cameraPos;
         //uniform float height;
 		void main(void) {
@@ -321,7 +330,10 @@
     var mapBuildings;
     var mapSkyDome;
     var mapApartment;
+    var mapSun;
+    
     var mapFrustum;
+    
     var gl;
     var positionMarker;
     var fieldOfView = 90/16*9;
@@ -358,6 +370,8 @@
         mapBuildings = new Buildings(gl, Controller.position);
         mapBuildings.onLoaded = scheduleFrameRendering;
         
+        mapSun = new Sun( Controller.position.lat, Controller.position.lng );
+        //window.setTimeout( animateSun, 50); 
         
         updatePositionMarker();
         //console.log("Setting map center to %o", position);
@@ -426,6 +440,13 @@
             scheduleFrameRendering();
     }
 
+    function animateSun()
+    {
+        mapSun.time = (mapSun.time + 0.05) % 24;
+        mapSun.buildGlGeometry();
+        scheduleFrameRendering();
+        window.setTimeout( animateSun, 50); 
+    }
 	
 	function renderFrustum()
 	{
@@ -572,14 +593,17 @@
 	    if (!gl || !Controller.localPosition ) //not yet initialized
 	        return;
 	        
-		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+		gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
 	        
         var modelViewMatrix = glu.lookAt(Controller.viewAngleYaw, Controller.viewAnglePitch, Controller.localPosition);
 	    var projectionMatrix = mat4.create();
-	    mat4.perspective(projectionMatrix, fieldOfView/180*Math.PI, webGlCanvas.width / webGlCanvas.height, 0.2, 5000.0);
+	    mat4.perspective(projectionMatrix, fieldOfView/180*Math.PI, webGlCanvas.width / webGlCanvas.height, 0.2, 5100.0);
 
 
-        var renderItems = [mapPlane, mapBuildings, mapSkyDome, mapApartment];
+        //note: mapApartment has to be rendered last, as it clears the z-buffer to work
+        //      around some artifacts. Rendering anything afterwards will likely overdraw
+        //      portions of the image even though they are close to the camera
+        var renderItems = [mapPlane, mapBuildings, mapSkyDome, mapSun, mapApartment];
         for (var i in renderItems)
             if (renderItems[i])
                 renderItems[i].render(modelViewMatrix, projectionMatrix);
@@ -615,7 +639,7 @@
 	<canvas id="minimapCanvas" style="width:100%; border: 1px solid black" ></canvas>
 
     <h4> Neighborhood </h4>
-    <div id="mapDiv" style=""> </div>
+    <div id="mapDiv" > </div>
    
 </div>
 

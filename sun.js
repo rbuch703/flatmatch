@@ -11,8 +11,15 @@ function getDayOfYear( date ) {
 function Sun(lat, lng) {
     this.lat = lat;
     this.lng = lng;
-    this.dayOfYear = 1;
+    this.dayOfYear = 229;
     this.time = 12; //noon;
+
+    this.shaderProgram = glu.createShader(  document.getElementById("shader-vs").text,
+                                            document.getElementById("sun-shader-fs").text,
+                                            ["vertexPosition", "vertexTexCoords"],
+                                            ["modelViewProjectionMatrix", "tex"] );
+    this.buildGlGeometry();
+
 }
 
 // source of computation: http://www.pveducation.org/pvcdrom/properties-of-sunlight/suns-position
@@ -53,4 +60,96 @@ Sun.prototype.getPosition = function() {
     return {"elevation": elevation, "azimuth": azimuth};
 }
 
+Sun.prototype.buildGlGeometry = function() {
+    if (this.vertices)
+        gl.deleteBuffer(this.vertices);
 
+    var elevation = this.getPosition().elevation;
+    var azimuth   = this.getPosition().azimuth;
+
+    //console.log("time: %s:%s, elevation: %s, azimuth: %s", this.time.toFixed(0), ((this.time % 1 )*60).toFixed(0), (elevation/Math.PI*180).toFixed(0), (azimuth/Math.PI*180).toFixed(0));
+
+    var RADIUS = 4900;  //Skybox radius (on which the sun is pinned)
+    var shift = [ RADIUS * Math.sin(azimuth) * Math.cos(elevation), 
+                 -RADIUS * Math.cos(azimuth) * Math.cos(elevation), 
+                  RADIUS * Math.sin(elevation)];
+
+    //console.log(shift);
+    var vertices= [];
+ 	
+	var base = [];
+	var top = [];
+		
+	var NUM_H_SLICES = 10;
+	var NUM_V_SLICES = 10;
+	for (var i = 0; i < NUM_H_SLICES; i++)
+	{
+		var azimuth1 = i / NUM_H_SLICES * 2 * Math.PI;    //convert to radiants in  [0...2*PI]
+		var x1 = Math.cos(azimuth1) * Sun.RADIUS;
+		var y1 = Math.sin(azimuth1) * Sun.RADIUS;
+
+		var azimuth2 = (i+1) / NUM_H_SLICES * 2 * Math.PI;
+		var x2 = Math.cos(azimuth2) * Sun.RADIUS;
+		var y2 = Math.sin(azimuth2) * Sun.RADIUS;
+
+
+	    for (var j = 0; j+1 <= NUM_V_SLICES; j++)
+    	{
+    	    var polar1 =  j    * Math.PI / (2.0 * NUM_V_SLICES); //convert to radiants in [0..1/2*PI]
+    	    var polar2 = (j+1) * Math.PI / (2.0 * NUM_V_SLICES);
+
+            
+		    var A = [x1 * Math.cos(polar1), y1 * Math.cos(polar1), Sun.RADIUS * Math.sin(polar1)];
+		    var B = [x2 * Math.cos(polar1), y2 * Math.cos(polar1), Sun.RADIUS * Math.sin(polar1)];
+		    var C = [x2 * Math.cos(polar2), y2 * Math.cos(polar2), Sun.RADIUS * Math.sin(polar2)];
+		    var D = [x1 * Math.cos(polar2), y1 * Math.cos(polar2), Sun.RADIUS * Math.sin(polar2)];
+
+		
+		    var verts = [].concat(A, C, B, A, D, C);
+		    vertices.push.apply( vertices, verts);
+		    
+		    A[2] = -A[2];
+		    B[2] = -B[2];
+		    C[2] = -C[2];
+		    D[2] = -D[2];
+		    verts = [].concat(A, B, C, A, C, D);
+		    //var verts = [].concat(A, C, B, A, D, C);
+		    vertices.push.apply( vertices, verts);
+		    
+		}
+	}
+
+	for (var i = 0; i < vertices.length; i+=3)
+	{
+	    vertices[i  ] += shift[0];
+	    vertices[i+1] += shift[1];
+	    vertices[i+2] += shift[2];
+	}
+	
+	this.numVertices = vertices.length / 3;
+    this.vertices = glu.createArrayBuffer(vertices);
+    //this.texCoords= glu.createArrayBuffer(this.texCoords);
+}
+
+Sun.prototype.render = function(modelViewMatrix, projectionMatrix) {
+        
+	gl.useProgram(this.shaderProgram);   //    Install the program as part of the current rendering state
+	gl.enableVertexAttribArray(this.shaderProgram.locations.vertexPosition); // setup vertex coordinate buffer
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertices);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
+	gl.vertexAttribPointer(this.shaderProgram.locations.vertexPosition, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
+    
+    /*if (this.shaderProgram.locations.vertexTexCoords != -1)
+    {
+	    gl.enableVertexAttribArray(this.shaderProgram.locations.vertexTexCoords); //setup texcoord buffer
+	    gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoords);
+	    gl.vertexAttribPointer(this.shaderProgram.locations.vertexTexCoords, 2, gl.FLOAT, false, 0, 0);  //assigns array "texCoords" bound above as the vertex attribute "vertexTexCoords"
+	}*/
+
+    var mvpMatrix = mat4.create();
+    mat4.mul(mvpMatrix, projectionMatrix, modelViewMatrix);
+	gl.uniformMatrix4fv(this.shaderProgram.locations.modelViewProjectionMatrix, false, mvpMatrix);
+    
+	gl.drawArrays(gl.TRIANGLES, 0, this.numVertices);
+}
+
+Sun.RADIUS = 100;

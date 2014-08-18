@@ -46,9 +46,6 @@ SkyDome.prototype.buildGlGeometry = function() {
     im.onload = function() { onTextureLoaded(im, dome); };
     im.src = "skydome.jpg";
     	
-	var base = [];
-	var top = [];
-		
 	var NUM_H_SLICES = 20;
 	var NUM_V_SLICES = 10;
 	for (var i = 0; i < NUM_H_SLICES; i++)
@@ -78,7 +75,7 @@ SkyDome.prototype.buildGlGeometry = function() {
 		    /*var D = [0,0, SkyDome.RADIUS];
 		    var C = [0,0, SkyDome.RADIUS];*/
 		
-		    var verts = [].concat([], A, B, C, A, C, D);
+		    var verts = [].concat(A, B, C, A, C, D);
 		    this.vertices.push.apply( this.vertices, verts);
 		
 		    var tc_left = i/NUM_H_SLICES;
