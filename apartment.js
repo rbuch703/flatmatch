@@ -268,11 +268,10 @@ Apartment.prototype.localToPixelCoordinates = function(localPosition)
         return [0,0];
 
     var pos = [];
-    pos[0] = localPosition.x - this.worldShift[0];
-    pos[1] = localPosition.y - this.worldShift[1];
+    pos[0] =    localPosition.x - this.worldShift[0] ;
+    pos[1] = - (localPosition.y - this.worldShift[1]);
     //console.log("After World Shift: %s", p1);
 
-    pos[1] = - pos[1];
 
     rotate(pos, - mapApartment.yawShift);
     pos = add2(pos, mapApartment.pixelShift);
@@ -280,5 +279,21 @@ Apartment.prototype.localToPixelCoordinates = function(localPosition)
     pos[1] *= mapApartment.scale;
 
     return pos;
+}
+
+Apartment.prototype.pixelToLocalCoordinates = function(pixelPosition)
+{
+    if (!mapApartment.worldShift || !mapApartment.pixelShift || mapApartment.yawShift === undefined)
+        return [0,0];
+
+    pixelPosition[0] /= mapApartment.scale;
+    pixelPosition[1] /= mapApartment.scale;
+    pixelPosition = sub2(pixelPosition, mapApartment.pixelShift);
+    rotate(pixelPosition, mapApartment.yawShift);
+
+    return {
+        "x":   pixelPosition[0] + this.worldShift[0],
+        "y": - pixelPosition[1] + this.worldShift[1]
+    }
 }
 

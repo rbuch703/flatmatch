@@ -271,8 +271,20 @@
         mapApartment = new Apartment(offer.layoutId, Controller.position, offer.yaw != null ? offer.yaw : 0.0, apartmentFloorHeight);
         mapApartment.onLoaded = onApartmentLoaded;
         //onChangeLocation();
-        
+        minimapCanvas.addEventListener("click", function(ev) {onMinimapClick(ev.pageX - minimapCanvas.offsetLeft, ev.pageY - minimapCanvas.offsetTop);});
     }    
+    
+    function onMinimapClick(x,y)
+    {
+	    var canvasScale = Math.min( minimapCanvas.width / layoutImage.width, minimapCanvas.height / layoutImage.height);
+        x/= canvasScale;
+        y/= canvasScale;
+    
+        var newPos = mapApartment.pixelToLocalCoordinates([x,y]);
+        Controller.localPosition.x = newPos.x;
+        Controller.localPosition.y = newPos.y;
+        scheduleFrameRendering();
+    }
         
     function init()
     {
@@ -578,7 +590,7 @@
     <title>Open Street View</title>
 </head>
 
-<body onload="init()"  style="position:absolute; top:0px; bottom:0px; left:0px; right:0px"> <!-- style ="padding: 0px; margin: 0px;" -->
+<body onload="init()"> <!-- style ="padding: 0px; margin: 0px;" -->
 
 <div id="glErrorDiv" style="display:none">
     <h2 style="">Open Street View</h2>
