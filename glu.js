@@ -82,22 +82,21 @@ glu.lookAt = function(yaw, pitch, translate)
 
 }
 
+glu.init = function()
+{
+    glu.anisotropyExtension = gl.getExtension("EXT_texture_filter_anisotropic");
+    if (glu.anisotrophyExtension)
+        glu.anisotropyExtension.MAX_TEXTURE_MAX_ANISOTROPY_EXT = gl.getParameter(glu.anisotropyExtension.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
+
+    glu.depthTextureExtension = gl.getExtension("WEBGL_depth_texture");
+}
 
 glu.setMaxAnisotropy = function()
 {
-    if (!gl) return;
-    
-    if (glu.anisotropyExtension === undefined)
-        glu.anisotropyExtension = gl.getExtension("EXT_texture_filter_anisotropic");
+    if (glu.anisotropyExtension == null)
+        return;
         
-    if (! glu.anisotropyExtension) return;
-    
-    if (glu.anisotropyExtension.MAX_TEXTURE_MAX_ANISOTROPY_EXT === undefined)
-        glu.anisotropyExtension.MAX_TEXTURE_MAX_ANISOTROPY_EXT = gl.getParameter(glu.anisotropyExtension.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
-
-    if (glu.anisotropyExtension)
-        gl.texParameterf(gl.TEXTURE_2D, glu.anisotropyExtension.TEXTURE_MAX_ANISOTROPY_EXT, glu.anisotropyExtension.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
-    
+    gl.texParameterf(gl.TEXTURE_2D, glu.anisotropyExtension.TEXTURE_MAX_ANISOTROPY_EXT, glu.anisotropyExtension.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
 }
 
 

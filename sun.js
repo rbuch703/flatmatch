@@ -23,7 +23,7 @@ function Sun(lat, lng) {
 }
 
 // source of computation: http://www.pveducation.org/pvcdrom/properties-of-sunlight/suns-position
-Sun.prototype.getPosition = function() {
+Sun.prototype.getAngles = function() {
     var dtGmt = 1; //usually one hour time difference to GMT
 
     // day-of-the-year at which summer time begins. Technically, European summer time starts on the last Sunday in March. But since we do not want the user to have to enter a year, we'll just use the end of March as an approximation
@@ -60,20 +60,22 @@ Sun.prototype.getPosition = function() {
     return {"elevation": elevation, "azimuth": azimuth};
 }
 
+Sun.prototype.getPosition = function() {
+
+    var angles = this.getAngles();
+
+    //var RADIUS = 00;  //Skybox radius (on which the sun is pinned)
+    return [ SkyDome.RADIUS * Math.sin(angles.azimuth) * Math.cos(angles.elevation), 
+            -SkyDome.RADIUS * Math.cos(angles.azimuth) * Math.cos(angles.elevation), 
+             SkyDome.RADIUS * Math.sin(angles.elevation)];
+
+}
+
 Sun.prototype.buildGlGeometry = function() {
     if (this.vertices)
         gl.deleteBuffer(this.vertices);
 
-    var elevation = this.getPosition().elevation;
-    var azimuth   = this.getPosition().azimuth;
-
-    //console.log("time: %s:%s, elevation: %s, azimuth: %s", this.time.toFixed(0), ((this.time % 1 )*60).toFixed(0), (elevation/Math.PI*180).toFixed(0), (azimuth/Math.PI*180).toFixed(0));
-
-    var RADIUS = 4900;  //Skybox radius (on which the sun is pinned)
-    var shift = [ RADIUS * Math.sin(azimuth) * Math.cos(elevation), 
-                 -RADIUS * Math.cos(azimuth) * Math.cos(elevation), 
-                  RADIUS * Math.sin(elevation)];
-
+    var shift = this.getPosition();
     //console.log(shift);
     var vertices= [];
  	

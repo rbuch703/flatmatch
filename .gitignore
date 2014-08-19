@@ -3,3 +3,4 @@ syntax:glob
 
 *~
 tiles/*
+leaflet-src.js
