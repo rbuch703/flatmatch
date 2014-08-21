@@ -43,6 +43,13 @@ function norm3(v)
     return [ v[0]/len, v[1]/len, v[2]/len];
 }
 
+function getNormal(p1, p2, p3)
+{
+    var v1 = [p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]];
+    var v2 = [p3[0] - p1[0], p3[1] - p1[1], p3[2] - p1[2]];
+//    console.log(v1, v2);
+    return norm3( [ v1[2]*v2[1] - v1[1]*v2[2], v1[0]*v2[2] - v1[2]*v2[0], v1[1]*v2[0] - v1[0]*v2[1]] );
+}
 
 //returns the angle (in degrees) between the vectors v1-v2 and v1-v3
 function openingAngle( v1, v2, v3) {

@@ -682,6 +682,40 @@ Buildings.prototype.buildGlGeometry = function(outlines) {
     this.edgeVertices = glu.createArrayBuffer(this.edgeVertices);
 }
 
+Buildings.prototype.renderDepth = function(modelViewMatrix, projectionMatrix) {
+    if (! this.numVertices)
+        return;
+        
+
+    gl.enable(gl.CULL_FACE);
+    //HACK: A building casts the same shadow regardless of whether its front of back faces are used in the shadow computation.
+    //      The only exception is the building the camera is located in: using front faces would prevent light to be casted on
+    //      anything inside the building walls, i.e. no light would fall on anything inside the apartment (since its windows
+    //      have to corresponding holes in the buiding geometry. Using only the front faces effectively ignores just the
+    //      building the camera is in for the shadow computation, which gives the desired effect to shading the apartment
+    gl.cullFace(gl.FRONT);
+
+	gl.useProgram(glu.depthShaderProgram);   //    Install the program as part of the current rendering state
+	gl.enableVertexAttribArray(this.shaderProgram.locations.vertexPosition); // setup vertex coordinate buffer
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertices);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
+	gl.vertexAttribPointer(glu.depthShaderProgram.locations.vertexPosition, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
+    
+    var mvpMatrix = mat4.create();
+    mat4.mul(mvpMatrix, projectionMatrix, modelViewMatrix);
+
+	gl.uniformMatrix4fv(this.shaderProgram.locations.modelViewProjectionMatrix, false, mvpMatrix);
+
+    gl.activeTexture(gl.TEXTURE0);  //successive commands (here 'gl.bindTexture()') apply to texture unit 0
+    gl.bindTexture(gl.TEXTURE_2D, null); //render geometry without texture
+    
+    gl.drawArrays(gl.TRIANGLES, 0, this.numVertices);    
+
+    gl.cullFace(gl.BACK);   //reset to normal behavior
+
+}
+
+
 Buildings.prototype.render = function(modelViewMatrix, projectionMatrix) {
     if (! this.numVertices)
         return;

@@ -6,8 +6,8 @@ function Apartment(id, position, yaw, height) {
     
     this.shaderProgram = glu.createShader(  document.getElementById("shadowed-shader-vs").text, 
                                             document.getElementById("shadowed-texture-shader-fs").text,
-                                            ["vertexPosition", "vertexTexCoords"],
-                                            ["modelViewProjectionMatrix", "shadowMatrix", "tex", "shadowTex"]);
+                                            ["vertexPosition", "normalIn", "vertexTexCoords"],
+                                            ["modelViewProjectionMatrix", "sunDir", "shadowMatrix", "tex", "shadowTex"]);
 
     this.layoutId = id;
     this.layoutRequest = new XMLHttpRequest();
@@ -51,16 +51,25 @@ Apartment.prototype.render = function(modelViewMatrix, projectionMatrix, shadowM
 	gl.uniformMatrix4fv(this.shaderProgram.locations.modelViewProjectionMatrix, false, mvpMatrix);
 	gl.uniformMatrix4fv(this.shaderProgram.locations.shadowMatrix, false, shadowMvpMatrix);
 
-	gl.enableVertexAttribArray(this.shaderProgram.locations.vertexPos); // setup vertex coordinate buffer
-	gl.enableVertexAttribArray(this.shaderProgram.locations.vertexTexCoords); //setup texcoord buffer
+
+    var sunDir = norm3(mapSun.getPosition());
+	gl.uniform3fv(this.shaderProgram.locations.sunDir, sunDir);
+
     gl.uniform1i(this.shaderProgram.locations.tex, 0); //select texture unit 0 as the source for the shader variable "tex" 
     gl.uniform1i(this.shaderProgram.locations.shadowTex, 1); //select texture unit 1 as the source for the shader variable "shadowTex" 
 
+	gl.enableVertexAttribArray(this.shaderProgram.locations.vertexPos); // setup vertex coordinate buffer
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertices);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
 	gl.vertexAttribPointer(this.shaderProgram.locations.vertexPos, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
     
+	gl.enableVertexAttribArray(this.shaderProgram.locations.vertexTexCoords); //setup texcoord buffer
 	gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoords);
 	gl.vertexAttribPointer(this.shaderProgram.locations.vertexTexCoords, 2, gl.FLOAT, false, 0, 0);  //assigns array "texCoords" bound above as the vertex attribute "vertexTexCoords"
+
+	gl.enableVertexAttribArray(this.shaderProgram.locations.normalIn); //setup normal buffer
+	gl.bindBuffer(gl.ARRAY_BUFFER, this.normals);
+	gl.vertexAttribPointer(this.shaderProgram.locations.normalIn, 3, gl.FLOAT, false, 0, 0);  //assigns array "texCoords" bound above as the vertex attribute "vertexTexCoords"
+
 
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, depthTexture);
@@ -157,6 +166,7 @@ Apartment.prototype.processLayout = function(segments)
 {
     this.vertices = [];
     this.texCoords= [];
+    this.normals  = [];
     for (var i in segments)
     {
         var seg = segments[i];
@@ -175,12 +185,18 @@ Apartment.prototype.processLayout = function(segments)
         
         var coords = [].concat([0,0], [1,0], [1,1], /**/ [0,0], [1,1], [0,1]);
         [].push.apply(this.texCoords, coords);
+        
+        var N = getNormal(A, B, C);
+        [].push.apply(this.normals, [].concat(N, N, N, N, N, N) );
     }
 
     this.numVertices = (this.vertices.length / 3) | 0;
+    console.log("number of normal floats: %s; %s", this.normals.length, this.normals[0]);
+    console.log("number of vertex floats: %s", this.vertices.length);
     
     this.vertices = glu.createArrayBuffer(this.vertices); //convert to webgl array buffer
     this.texCoords= glu.createArrayBuffer(this.texCoords);
+    this.normals  = glu.createArrayBuffer(this.normals);
     
     for (var i = 0; i < this.numVertices/6; i++) {
         this.requestTexture(this.layoutId, i, segments[i]);

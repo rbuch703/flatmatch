@@ -32,6 +32,11 @@
 */
     </style>
 
+    <link rel="stylesheet" href="http://code.jquery.com/ui/1.10.4/themes/smoothness/jquery-ui.css">
+    <script type="text/javascript" src="http://code.jquery.com/jquery-1.9.1.js"></script>
+    <script type="text/javascript" src="http://code.jquery.com/ui/1.10.4/jquery-ui.js"></script>
+
+
     <script type="text/javascript" src="leaflet.js"></script>
     <script type="text/javascript" src="tile.js"></script>
     <script type="text/javascript" src="mapLayer.js"></script>
@@ -176,47 +181,64 @@
 	    #line 1 110
 		attribute vec3 vertexPosition;
         attribute vec2 vertexTexCoords;  			
+        attribute vec3 normalIn;
 		
 		uniform mat4 modelViewProjectionMatrix;
 		uniform mat4 shadowMatrix;
 
         varying vec2 texCoordV;
         varying vec4 shadowTexPosition;
+        varying vec3 normalOut;
 
 		void main(void) {
 			gl_Position = modelViewProjectionMatrix * vec4(vertexPosition, 1.0);
 			shadowTexPosition = shadowMatrix * vec4(vertexPosition, 1.0);
 			texCoordV = vertexTexCoords;
+			normalOut = normalIn;
 		}
 	</script>
 
 	<script id="shadowed-texture-shader-fs" type="x-shader/x-fragment">
 	    #line 1 111
 		precision mediump float;
+		
+		
         varying vec2 texCoordV;
         varying vec4 shadowTexPosition;
+        varying vec3 normalOut;
         
         uniform sampler2D tex;
         uniform sampler2D shadowTex;    //light source depth texture
+		uniform vec3 sunDir;
 		void main(void) {
 		    vec4 col1 = texture2D(tex, texCoordV.st);
 		    //shadow position in normalized device coordinates
             vec3 shadowNDC = (shadowTexPosition.xyz / shadowTexPosition.w) * 0.5 + 0.5;
 		    
-		    float sample = texture2D(shadowTex, shadowNDC.st).r;
+		    //float sample = ;
 		    /*const float near = 4900;
 		    const float far  = 5100;
 		    const float a    = far / (far - near);
 		    const float b    = far * near / (near - far);*/
 		    
 		    float depth = shadowNDC.z;
-		    bool inLight = sample + 0.00001 >= depth;
+		    int inLight = 0;
+		    const float delta = 0.5/2048.0;
+		    if (texture2D(shadowTex, vec2(shadowNDC.s,         shadowNDC.t        ) ).r + 0.00002 >= depth) inLight++;
+		    /*if (texture2D(shadowTex, vec2(shadowNDC.s,         shadowNDC.t + delta) ).r + 0.00001 >= depth) inLight++;
+		    if (texture2D(shadowTex, vec2(shadowNDC.s + delta, shadowNDC.t        ) ).r + 0.00001 >= depth) inLight++;
+		    if (texture2D(shadowTex, vec2(shadowNDC.s + delta, shadowNDC.t + delta) ).r + 0.00001 >= depth) inLight++;*/
 		    //float normDepth = a + b / 
 		    
-		    if (inLight)
+		    float sunDiff = dot(sunDir, normalOut);
+            if (( sunDiff < 0.00001) || (inLight == 0))
+                gl_FragColor = col1;
+            else		    
+    		    gl_FragColor = vec4(col1.rgb*(1.0 + float(inLight)/2.5 * sunDiff), 1.0);
+		    /*if (inLight)
 		        gl_FragColor = col1*1.2;
 	        else
-                gl_FragColor = col1;
+                gl_FragColor = col1;*/
 		}
 	</script>
 
@@ -371,6 +393,17 @@
         Controller.localPosition.y = newPos.y;
         scheduleFrameRendering();
     }
+    
+    function onSunPositionChanged(day, time)
+    {
+        //console.log("new sun position is %s/%s", day, time);
+        mapSun.dayOfYear = day;
+        mapSun.time = time;
+        mapSun.buildGlGeometry();
+        //renderDepthTexture();
+        depthTextureDirty = true;
+        scheduleFrameRendering();
+    }
         
     function init()
     {
@@ -381,6 +414,25 @@
             rowId = params.rowid ? parseInt(params.rowid) : 13;
                 
         }
+
+        
+        $( "#slider-day" ).slider({
+            min: 1,
+            max: 365,
+            value: 200,
+            step:1,
+            stop:  function() {onSunPositionChanged( $( "#slider-day" ).slider( "value"), mapSun.time); },
+            slide: function( event, ui ) { onSunPositionChanged(ui.value, mapSun.time); }
+            });
+
+        $( "#slider-time" ).slider({
+            min: 0,
+            max: 24,
+            value: 10,
+            step:0.1,
+            stop:  function() {onSunPositionChanged(mapSun.dayOfYear, $( "#slider-time" ).slider("value")); },
+            slide: function( event, ui ) { onSunPositionChanged(mapSun.dayOfYear, ui.value); }
+            });
 
         
         var req = new XMLHttpRequest();
@@ -414,6 +466,7 @@
     var shadowMvpMatrix = mat4.create();
     
     var depthTextureSize = 1024*2;
+    var depthTextureDirty = true;
     var gl;
     
     var positionMarker;
@@ -452,7 +505,8 @@
         mapBuildings.onLoaded = scheduleFrameRendering;
         
         mapSun = new Sun( Controller.position.lat, Controller.position.lng );
-        renderDepthTexture();  //needs sun and apartment
+        onSunPositionChanged( $( "#slider-day" ).slider( "value"), $( "#slider-time" ).slider( "value"));
+        //renderDepthTexture();  //needs sun and apartment
         
         //window.setTimeout( animateSun, 50); 
         
@@ -724,6 +778,9 @@
 
         if (mapApartment)
             mapApartment.renderDepth(modelViewMatrix, projectionMatrix);
+        
+        if (mapBuildings)
+            mapBuildings.renderDepth(modelViewMatrix, projectionMatrix);
 
     }
 	
@@ -732,6 +789,11 @@
 	    if (!gl || !Controller.localPosition ) //not yet initialized
 	        return;
 
+        if (depthTextureDirty)
+        {
+            renderDepthTexture();
+            depthTextureDirty = false;
+        }
         
         //select default frame buffer (do not render to texture);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -783,7 +845,9 @@
 
     <h4> Neighborhood </h4>
     <div id="mapDiv" > </div>
-   
+
+    Tag: <div id="slider-day" style="width:100%"></div>   
+    Zeit: <div id="slider-time" style="width:100%"></div>   
 </div>
 
 
