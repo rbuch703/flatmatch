@@ -24,7 +24,11 @@ var Controller = {
 
         return {lat: this.position.lat + this.localPosition.y / metersPerDegreeLat,
                 lng: this.position.lng + this.localPosition.x / metersPerDegreeLng};
-        
+    },
+    
+    getLocalPosition: function()
+    {
+        return [this.localPosition.x, this.localPosition.y, this.localPosition.z];
     },
 
     buildQueryString: function(lat, lng)

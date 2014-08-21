@@ -56,6 +56,33 @@
             gl_FragColor = texture2D(tex, texCoordV.st);
 		}
 	</script> -->
+    <script id="depth-shader-vs" type="x-shader/x-vertex">
+	    #line 1 101
+		precision mediump float;
+
+        uniform mat4 modelViewProjectionMatrix;
+		attribute vec3 vertexPosition;
+        //varying vec3 worldPosition;
+
+		void main(void) {
+			gl_Position = modelViewProjectionMatrix * vec4(vertexPosition, 1.0);
+			//worldPosition = vertexPosition; //pass through untransformed
+        }
+    </script>
+
+	<script id="depth-shader-fs" type="x-shader/x-fragment">
+	    #line 1 102
+		precision mediump float;
+        //uniform vec3 lightPos;
+        //varying vec3 worldPosition;
+        
+		void main(void) {
+		    //vec3 lightVec = worldPosition.xyz - lightPos;
+            //float depth = clamp((length(lightVec) - 4950.0)/100.0, 0.0, 1.0);
+            gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);//vec4(vec3(depth), 1.0);
+		}
+	</script>
+
 
 	<script id="texture-shader-fs" type="x-shader/x-fragment">
 		precision mediump float;
@@ -89,11 +116,11 @@
 		    const float c = 0.02;
 
             vec3 vView = normalize( cameraPos - worldPosition); //direction vector from surface to camera (camera is always at (0,0,0) )
-            if (gl_FragCoord.z < 0.95)
+            /*if (gl_FragCoord.z < 0.95)
             {
                 discard;
                 return;
-            }
+            }*/
             float diffuse = abs( 0.5 * dot(vView, normal) );
 
             //gl_FragColor = vec4( (normal + 1.0)/2.0, 1.0);
@@ -144,6 +171,55 @@
 			texCoordV = vertexTexCoords;
 		}
 	</script>
+
+	<script id="shadowed-shader-vs" type="x-shader/x-vertex">
+	    #line 1 110
+		attribute vec3 vertexPosition;
+        attribute vec2 vertexTexCoords;  			
+		
+		uniform mat4 modelViewProjectionMatrix;
+		uniform mat4 shadowMatrix;
+
+        varying vec2 texCoordV;
+        varying vec4 shadowTexPosition;
+
+		void main(void) {
+			gl_Position = modelViewProjectionMatrix * vec4(vertexPosition, 1.0);
+			shadowTexPosition = shadowMatrix * vec4(vertexPosition, 1.0);
+			texCoordV = vertexTexCoords;
+		}
+	</script>
+
+	<script id="shadowed-texture-shader-fs" type="x-shader/x-fragment">
+	    #line 1 111
+		precision mediump float;
+        varying vec2 texCoordV;
+        varying vec4 shadowTexPosition;
+        
+        uniform sampler2D tex;
+        uniform sampler2D shadowTex;    //light source depth texture
+		void main(void) {
+		    vec4 col1 = texture2D(tex, texCoordV.st);
+		    //shadow position in normalized device coordinates
+            vec3 shadowNDC = (shadowTexPosition.xyz / shadowTexPosition.w) * 0.5 + 0.5;
+		    
+		    float sample = texture2D(shadowTex, shadowNDC.st).r;
+		    /*const float near = 4900;
+		    const float far  = 5100;
+		    const float a    = far / (far - near);
+		    const float b    = far * near / (near - far);*/
+		    
+		    float depth = shadowNDC.z;
+		    bool inLight = sample + 0.00001 >= depth;
+		    //float normDepth = a + b / 
+		    
+		    if (inLight)
+		        gl_FragColor = col1*1.2;
+	        else
+                gl_FragColor = col1;
+		}
+	</script>
+
 
 	<script id="building-shader-vs" type="x-shader/x-vertex">
 		attribute vec3 vertexPosition;
@@ -334,7 +410,12 @@
     
     var mapFrustum;
     
+    var colorTexture, depthTexture, framebuffer;
+    var shadowMvpMatrix = mat4.create();
+    
+    var depthTextureSize = 1024*2;
     var gl;
+    
     var positionMarker;
     var fieldOfView = 90/16*9;
     var layoutId;// = 158;
@@ -371,6 +452,8 @@
         mapBuildings.onLoaded = scheduleFrameRendering;
         
         mapSun = new Sun( Controller.position.lat, Controller.position.lng );
+        renderDepthTexture();  //needs sun and apartment
+        
         //window.setTimeout( animateSun, 50); 
         
         updatePositionMarker();
@@ -521,6 +604,30 @@
         mapSkyDome = new SkyDome(gl);
         mapSkyDome.onLoaded = scheduleFrameRendering;
 
+        // Create a color texture for use with the depth shader
+        colorTexture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, colorTexture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, depthTextureSize, depthTextureSize, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+
+        // Create the depth texture
+        depthTexture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, depthTexture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT, depthTextureSize, depthTextureSize, 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_INT, null);
+
+        framebuffer = gl.createFramebuffer();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, colorTexture, 0);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, depthTexture, 0);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
 	}
 	
 
@@ -535,8 +642,6 @@
         webGlCanvas.height = webGlCanvas.clientHeight / 2;
         webGlCanvas.width  = webGlCanvas.clientWidth / 2;
 
-	    if (gl)
-			gl.viewport(0, 0, webGlCanvas.width, webGlCanvas.height);
 
         if (layoutImage)
         {
@@ -588,18 +693,56 @@
         ctx.stroke();
 
 	}
+
+    function renderDepthTexture()
+    {
+        //the sun is the camera for this render pass, so we cannot render without knowing its position
+        if (!mapSun) 
+            return;
+
+        //use created texture-backed framebuffer as render target (and not the default buffer that is output to screen)
+        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+        
+        //gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, colorTexture, 0);
+        //gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, depthTexture, 0);
+		gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
+		gl.viewport(0, 0, depthTextureSize, depthTextureSize);
+
+        var modelViewMatrix = mat4.create();
+        var pos = mapSun.getPosition();
+        pos[1] = -pos[1];
+        mat4.lookAt(modelViewMatrix, pos, [0, 0, Controller.localPosition.z], [0,0,1]);
+    	mat4.scale(modelViewMatrix, modelViewMatrix, [1,-1,1]);//negate y coordinate to make positive y go downward
+	    var projectionMatrix = mat4.create();
+	    mat4.perspective(projectionMatrix, fieldOfView/180*Math.PI/300, webGlCanvas.width / webGlCanvas.height, 3000, 5100.0);
+
+        // the apartment shader needs this later to access the shadow buffer
+        shadowMvpMatrix = mat4.create();
+        mat4.mul(shadowMvpMatrix, projectionMatrix, modelViewMatrix);
+
+        gl.disable(gl.CULL_FACE);
+
+        if (mapApartment)
+            mapApartment.renderDepth(modelViewMatrix, projectionMatrix);
+
+    }
 	
 	function renderScene()
 	{
 	    if (!gl || !Controller.localPosition ) //not yet initialized
 	        return;
-	        
+
+        
+        //select default frame buffer (do not render to texture);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 		gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
-	        
+		gl.viewport(0, 0, webGlCanvas.width, webGlCanvas.height);
+
         var modelViewMatrix = glu.lookAt(Controller.viewAngleYaw, Controller.viewAnglePitch, Controller.localPosition);
 	    var projectionMatrix = mat4.create();
 	    mat4.perspective(projectionMatrix, fieldOfView/180*Math.PI, webGlCanvas.width / webGlCanvas.height, 0.2, 5100.0);
 
+        gl.enable(gl.CULL_FACE);
 
         //note: mapApartment has to be rendered last, as it clears the z-buffer to work
         //      around some artifacts. Rendering anything afterwards will likely overdraw
@@ -607,9 +750,8 @@
         var renderItems = [mapPlane, mapBuildings, mapSkyDome, mapSun, mapApartment];
         for (var i in renderItems)
             if (renderItems[i])
-                renderItems[i].render(modelViewMatrix, projectionMatrix);
-
-		gl.flush();
+                renderItems[i].render(modelViewMatrix, projectionMatrix, shadowMvpMatrix);
+		//gl.flush();
 	}
 	
     </script>

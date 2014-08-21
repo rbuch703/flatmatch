@@ -4,10 +4,10 @@ function Apartment(id, position, yaw, height) {
 
     this.textures = [];
     
-    this.shaderProgram = glu.createShader(  document.getElementById("shader-vs").text, 
-                                            document.getElementById("texture-shader-fs").text,
+    this.shaderProgram = glu.createShader(  document.getElementById("shadowed-shader-vs").text, 
+                                            document.getElementById("shadowed-texture-shader-fs").text,
                                             ["vertexPosition", "vertexTexCoords"],
-                                            ["modelViewProjectionMatrix", "tex"]);
+                                            ["modelViewProjectionMatrix", "shadowMatrix", "tex", "shadowTex"]);
 
     this.layoutId = id;
     this.layoutRequest = new XMLHttpRequest();
@@ -31,13 +31,10 @@ function Apartment(id, position, yaw, height) {
     this.layoutRequest.send();
 }
 
-Apartment.prototype.render = function(modelViewMatrix, projectionMatrix)
+Apartment.prototype.render = function(modelViewMatrix, projectionMatrix, shadowMvpMatrix)
 {
     if (!this.vertices)
         return;
-        
-    var mvpMatrix = mat4.create();
-    mat4.mul(mvpMatrix, projectionMatrix, modelViewMatrix);
 
     //As this tool is an apartment viewer, no other geometry is supposed to intersect with the apartment.
     //However, sometimes building geometry does intersect with the apartment geometry when the apartment is
@@ -46,18 +43,27 @@ Apartment.prototype.render = function(modelViewMatrix, projectionMatrix)
     //Will be drawn over and this helps masking geometrical errors
 	gl.clear(gl.DEPTH_BUFFER_BIT);
 
+        
+    var mvpMatrix = mat4.create();
+    mat4.mul(mvpMatrix, projectionMatrix, modelViewMatrix);
+
 	gl.useProgram(this.shaderProgram);   //    Install the program as part of the current rendering state
 	gl.uniformMatrix4fv(this.shaderProgram.locations.modelViewProjectionMatrix, false, mvpMatrix);
+	gl.uniformMatrix4fv(this.shaderProgram.locations.shadowMatrix, false, shadowMvpMatrix);
 
 	gl.enableVertexAttribArray(this.shaderProgram.locations.vertexPos); // setup vertex coordinate buffer
 	gl.enableVertexAttribArray(this.shaderProgram.locations.vertexTexCoords); //setup texcoord buffer
     gl.uniform1i(this.shaderProgram.locations.tex, 0); //select texture unit 0 as the source for the shader variable "tex" 
+    gl.uniform1i(this.shaderProgram.locations.shadowTex, 1); //select texture unit 1 as the source for the shader variable "shadowTex" 
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertices);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
 	gl.vertexAttribPointer(this.shaderProgram.locations.vertexPos, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
     
 	gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoords);
 	gl.vertexAttribPointer(this.shaderProgram.locations.vertexTexCoords, 2, gl.FLOAT, false, 0, 0);  //assigns array "texCoords" bound above as the vertex attribute "vertexTexCoords"
+
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, depthTexture);
 
     
 	for (var i = 0; i < this.numVertices; i+=6)
@@ -66,8 +72,27 @@ Apartment.prototype.render = function(modelViewMatrix, projectionMatrix)
         gl.bindTexture(gl.TEXTURE_2D, this.textures[i/6]);
 	    gl.drawArrays(gl.TRIANGLES, i, 6);
     }
-	gl.flush();
 }
+	
+Apartment.prototype.renderDepth = function(modelViewMatrix, projectionMatrix)
+{
+    if (!this.vertices)
+        return;
+        
+    var mvpMatrix = mat4.create();
+    mat4.mul(mvpMatrix, projectionMatrix, modelViewMatrix);
+
+	gl.useProgram(glu.depthShaderProgram);   //    Install the program as part of the current rendering state
+	gl.uniformMatrix4fv(glu.depthShaderProgram.locations.modelViewProjectionMatrix, false, mvpMatrix);
+    gl.uniform3fv(glu.depthShaderProgram.locations.lightPos, mapSun.getPosition());
+
+	gl.enableVertexAttribArray(this.shaderProgram.locations.vertexPos); // setup vertex coordinate buffer
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertices);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
+	gl.vertexAttribPointer(this.shaderProgram.locations.vertexPos, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
+        
+    gl.drawArrays(gl.TRIANGLES, 0, this.numVertices);
+}
+
 			
 			
 Apartment.prototype.handleLoadedTexture = function(image) {

@@ -89,6 +89,13 @@ glu.init = function()
         glu.anisotropyExtension.MAX_TEXTURE_MAX_ANISOTROPY_EXT = gl.getParameter(glu.anisotropyExtension.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
 
     glu.depthTextureExtension = gl.getExtension("WEBGL_depth_texture");
+
+    glu.depthShaderProgram = glu.createShader(  
+        document.getElementById("depth-shader-vs").text, 
+        document.getElementById("depth-shader-fs").text,
+        ["vertexPosition"],
+        ["modelViewProjectionMatrix", "lightPos"]);
+
 }
 
 glu.setMaxAnisotropy = function()
