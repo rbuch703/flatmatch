@@ -704,7 +704,7 @@ Buildings.prototype.renderDepth = function(modelViewMatrix, projectionMatrix) {
     var mvpMatrix = mat4.create();
     mat4.mul(mvpMatrix, projectionMatrix, modelViewMatrix);
 
-	gl.uniformMatrix4fv(this.shaderProgram.locations.modelViewProjectionMatrix, false, mvpMatrix);
+	gl.uniformMatrix4fv(glu.depthShaderProgram.locations.modelViewProjectionMatrix, false, mvpMatrix);
 
     gl.activeTexture(gl.TEXTURE0);  //successive commands (here 'gl.bindTexture()') apply to texture unit 0
     gl.bindTexture(gl.TEXTURE_2D, null); //render geometry without texture

@@ -12,27 +12,10 @@
     
     <meta property="fb:admins" content="100001025041261" />
 
-    <link   type="text/css" rel="stylesheet" href="styles/global.css" media="screen" />
-    <link   type="text/css" rel="stylesheet" href="styles/leaflet.css" />
+    <link type="text/css" rel="stylesheet" href="styles/global.css" media="screen" />
+    <link type="text/css" rel="stylesheet" href="styles/leaflet.css" />
+    <link type="text/css" rel="stylesheet" href="http://code.jquery.com/ui/1.10.4/themes/smoothness/jquery-ui.css">
 
-    <style>
-        #mapDiv { width:100%; height:400px;}
-    /*
-        @media (min-width: 1440px) {
-              #leftNavDiv { float:left; margin-right:20px; width:400px}
-              #contentDiv { margin-left: 420px; margin-right:10px; }
-              #mapDiv { width:400px; height:300px }
-          }
-
-        @media (max-width: 1439px) {
-              #leftNavDiv { margin-left: 10px; margin-right:50px; } //leave a 50px bar on the right to 
-              #contentDiv { margin-left: 10px; margin-right:50px; } //allow for mouse and touch scrolling
-              #mapDiv { width:100%; height:600px }
-          }
-*/
-    </style>
-
-    <link rel="stylesheet" href="http://code.jquery.com/ui/1.10.4/themes/smoothness/jquery-ui.css">
     <script type="text/javascript" src="http://code.jquery.com/jquery-1.9.1.js"></script>
     <script type="text/javascript" src="http://code.jquery.com/ui/1.10.4/jquery-ui.js"></script>
 
@@ -47,7 +30,9 @@
     <script type="text/javascript" src="poly2tri.js"></script>
     <script type="text/javascript" src="sun.js"></script>
     <script type="text/javascript" src="shadows.js"></script>
-
+    <script type="text/javascript" src="vicinityMap.js"></script>
+    <script type="text/javascript" src="apartmentMap.js"></script>
+    
 	<script type="text/javascript" src="gl-matrix.js" ></script>
 	<script type="text/javascript" src="glu.js" ></script>
 	<script type="text/javascript" src="math.js" ></script>
@@ -285,23 +270,16 @@
     <script type="text/javascript">
     "use strict"
 
-    //var narrowLayout;
-
-    var map;
+    //var map;
     var mapPlane;
     var mapBuildings;
     var mapSkyDome;
     var mapApartment;
     var mapSun;
     
-    var mapFrustum;
-    
-    //var colorTexture, depthTexture, framebuffer;
-    //var shadowMvpMatrix = mat4.create();
-    
     var gl;
     
-    var positionMarker;
+
     var fieldOfView = 90/16*9;
     var layoutId;// = 158;
     var rowId;
@@ -366,16 +344,7 @@
             
         Controller.onRequestFrameRender = scheduleFrameRendering;
         
-        map = L.map('mapDiv', {keyboard:false} ).setView([offer.lat, offer.lon], 18);
-        map.on("click", onMapClick);
-        map.on("zoomend", renderFrustum);
-
-        L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: 'OpenStreetMap',
-            maxZoom: 19, minZoom:0
-        }).addTo(map);
-
-        L.control.scale({imperial:false, position:"topright"}).addTo(map);
+        VicinityMap.init("mapDiv", offer.lat, offer.lon);
 	    initGl();  //initialize webGL canvas
 
         if (!gl)
@@ -403,20 +372,8 @@
         mapApartment = new Apartment(offer.layoutId, Controller.position, offer.yaw != null ? offer.yaw : 0.0, apartmentFloorHeight);
         mapApartment.onLoaded = onApartmentLoaded;
         //onChangeLocation();
-        minimapCanvas.addEventListener("click", function(ev) {onMinimapClick(ev.pageX - minimapCanvas.offsetLeft, ev.pageY - minimapCanvas.offsetTop);});
     }    
     
-    function onMinimapClick(x,y)
-    {
-	    var canvasScale = Math.min( minimapCanvas.width / layoutImage.width, minimapCanvas.height / layoutImage.height);
-        x/= canvasScale;
-        y/= canvasScale;
-    
-        var newPos = mapApartment.pixelToLocalCoordinates([x,y]);
-        Controller.localPosition.x = newPos.x;
-        Controller.localPosition.y = newPos.y;
-        scheduleFrameRendering();
-    }
     
     function onSunPositionChanged(day, time)
     {
@@ -471,16 +428,6 @@
 
     }   
     
-    
-    function updatePositionMarker()
-    {
-        if (positionMarker)
-            map.removeLayer(positionMarker);
-        
-        positionMarker = L.marker( Controller.getEffectivePosition() );
-        positionMarker.addTo(map).bindPopup("You are here");
-    }
-    
     function onApartmentLoaded()
     {
         Controller.localPosition.x = mapApartment.startingPos[0];
@@ -490,10 +437,15 @@
         if (map.getZoom() < 16)
             map.setZoom(16);*/
 
-        layoutImage = new Image();
-        layoutImage.onload = function() {onResize(); renderMiniMap();};
-        layoutImage.src = OFFER_REST_BASE_URL + "/get/layout/"+ layoutId;
-        
+        ApartmentMap.init(minimapCanvas, layoutId);
+		
+		ApartmentMap.onClick = function(x,y) { 
+            var newPos = mapApartment.pixelToLocalCoordinates([x,y]);
+            Controller.localPosition.x = newPos.x;
+            Controller.localPosition.y = newPos.y;
+            scheduleFrameRendering();
+        };
+
         mapPlane = new MapLayer(gl, Controller.position);
         mapPlane.onProgress= scheduleFrameRendering;
 
@@ -502,43 +454,10 @@
         
         mapSun = new Sun( Controller.position.lat, Controller.position.lng );
         onSunPositionChanged( $( "#slider-day" ).slider( "value"), $( "#slider-time" ).slider( "value"));
-        //renderDepthTexture();  //needs sun and apartment
         
-        //window.setTimeout( animateSun, 50); 
-        
-        updatePositionMarker();
-        //console.log("Setting map center to %o", position);
-        //Controller.updateHistoryState();
-        //renderFrustum();
-        /* make sure the 3D view is visible when a user clicked on the map (as this is usually what the user wants
-         * when he clicks on a map location. For the wide layout, the 3D view should align with the top of the screen ("true")
-         * to show the whole 3D view. For the narrow layout, the 3D view is the last important part on the page and should
-         * align with the bottom of the page to allow the map to be shown above. */
-        
-        //webGlCanvas.scrollIntoView( narrowLayout ? !narrowLayout.matches : true);
+        //VicinityMap.updatePositionMarker( Controller.getEffectivePosition() );
         scheduleFrameRendering();
     }
-    
-    function onMapClick(e)
-    {
-        /*var dLat = e.latlng.lat - Controller.position.lat;
-        var dLng = e.latlng.lng - Controller.position.lng;
-
-        var earthCircumference = 2 * Math.PI * (6378.1 * 1000);
-        var metersPerDegreeLat = earthCircumference / 360;
-        var metersPerDegreeLng = metersPerDegreeLat * Math.cos( Controller.position.lat / 180 * Math.PI);
-        
-        var dx = dLng * metersPerDegreeLng - Controller.localPosition.x;
-        var dy = dLat * metersPerDegreeLat - Controller.localPosition.y;
-        var dYaw = -(Math.atan2(dy, dx) / Math.PI * 180 - 90);
-        //console.log(e.latlng.lat, e.latlng.lng, dYaw);
-        yawLog.innerHTML = "./setApartmentYaw.py " + rowId + " " + dYaw.toFixed(1);
-        posLog.innerHTML = "./setApartmentPosition.py " + rowId + " " + e.latlng.lat + " " + e.latlng.lng;
-        */
-        
-        /*Controller.position = e.latlng;
-        onChangeLocation();*/
-    }   
     
     var frameRenderingScheduled = false;
     function scheduleFrameRendering()
@@ -555,66 +474,29 @@
     
     function executeFrameRendering()
     {
-        if (Controller.keysStillPressed())
-            Controller.updateKeyInteraction();
+        frameRenderingScheduled = false;
 
         if (Controller.position.lat === undefined || Controller.position.lng === undefined)
             return;
-            
-        updatePositionMarker();
-        renderFrustum();
-        renderScene();
-        renderMiniMap();
-        frameRenderingScheduled = false;
+
         
         // If at least one key is still pressed, schedule rendering of the next frame right away:
         // A pressed key will potentially change the scene and require a re-rendering
         if (Controller.keysStillPressed())   
             scheduleFrameRendering();
+
+        if (Controller.keysStillPressed())
+            Controller.updateKeyInteraction();
+
+        VicinityMap.updatePositionMarker( Controller.getEffectivePosition() );
+        VicinityMap.renderFrustum();
+        renderScene();
+        
+        if (mapApartment != undefined)
+            ApartmentMap.render( mapApartment.localToPixelCoordinates( Controller.localPosition ) );
     }
 
-	function renderFrustum()
-	{
-	    if (!gl)
-	        return;
-	    if (mapFrustum)
-	    {
-	        map.removeLayer(mapFrustum);
-	        mapFrustum = null;
-        }
-	    
-	    var effectivePosition = Controller.getEffectivePosition();
-	    
-	    /* One degree latitude on earth always corresponds to the same distance in meters ( 1/360th of the earth circumference).
-	     * But the distance of one degree longitude changes depending of the current latitude.
-	     * This aspect is the ration between the two distances. It is needed to correctly
-	     * draw that viewing frustum, which needs to be specified in lat/lnt
-	    */
-	    var localAspect = Math.cos( effectivePosition.lat / 180 * Math.PI);
-	    
-        var yawRad = Controller.viewAngleYaw / 180 * Math.PI;
-        /* compute only planar lookDir (ignoring pitch), as this is the relevant direction to render the frustum
-           on a 2D map
-         */
-        var lookDir = [Math.sin( yawRad), Math.cos(yawRad)];
-	    
-	    //console.log ("local aspect ratio at %s is %s", position.lat, localAspect );
-	    
-	    //console.log( webGlCanvas.height, webGlCanvas.width, fieldOfView / webGlCanvas.height * webGlCanvas.width);
-	    var phi = (0.5 * fieldOfView / webGlCanvas.height * webGlCanvas.width ) / 180 * Math.PI;
-	    var leftDir = [ Math.cos(phi) * lookDir[0]  - Math.sin(phi) * lookDir[1], 
-	                    Math.sin(phi) * lookDir[0]  + Math.cos(phi) * lookDir[1] ];
-	    var rightDir =[ Math.cos(-phi) * lookDir[0] - Math.sin(-phi) * lookDir[1], 
-	                    Math.sin(-phi) * lookDir[0] + Math.cos(-phi) * lookDir[1] ];
 
-        var len = Math.pow(0.5, map.getZoom())*2000;
-        //console.log(map.getZoom(), len);
-	    var pA = { lat: effectivePosition.lat + leftDir[1]*len*localAspect,  lng: effectivePosition.lng + leftDir[0]*len };
-	    var pB = { lat: effectivePosition.lat + rightDir[1]*len*localAspect, lng: effectivePosition.lng + rightDir[0]*len};
-	    var line = [effectivePosition, pA, pB, effectivePosition ]
-	    mapFrustum = L.polygon(line, {color: 'red', noClip: 'true', fillColor:"white", fillOpacity:0.4}).addTo(map);
-	}
-	
 	/**
 	 * Initialises WebGL and creates the 3D scene.
 	 */
@@ -664,63 +546,18 @@
         webGlCanvas.width  = webGlCanvas.clientWidth / 2;
 
 
-        if (layoutImage)
-        {
-	        var aspect = layoutImage.width / layoutImage.height;
-	        minimapCanvas.style.height = minimapCanvas.clientWidth / aspect + "px";
-            minimapCanvas.height = minimapCanvas.clientHeight;
-            minimapCanvas.width  = minimapCanvas.clientWidth;
-        }
+        ApartmentMap.resize();
         
         scheduleFrameRendering();
 	}	
 	
-	var layoutImage;
-	
-	function renderMiniMap()
-	{
-	    if (!layoutImage)
-	        return;
-
-	    if (!minimapCanvas.context2d)
-	        minimapCanvas.context2d = minimapCanvas.getContext("2d");
-
-        var ctx = minimapCanvas.context2d;
-        ctx.clearRect ( 0 , 0 , minimapCanvas.width , minimapCanvas.height );
-	    var canvasScale = Math.min( minimapCanvas.width / layoutImage.width, minimapCanvas.height / layoutImage.height);
-	    ctx.globalAlpha = 0.5;
-	    ctx.drawImage(layoutImage, 0, 0, layoutImage.width * canvasScale, layoutImage.height * canvasScale);
-	    ctx.globalAlpha = 1.0;
-	    
-	    var pos = mapApartment.localToPixelCoordinates( Controller.localPosition );
-	    //console.log(pos);
-	    pos[0] *= canvasScale;
-	    pos[1] *= canvasScale;
-        var RADIUS = minimapCanvas.width / 60;
-
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = "#44D";
-        ctx.beginPath();
-        ctx.arc(pos[0], pos[1], RADIUS, 0, 2 * Math.PI);
-        ctx.stroke();
-
-        var effYaw = Controller.viewAngleYaw - mapApartment.yawShift;
-        effYaw = effYaw / 180 * Math.PI;
-        var lookDir = [Math.sin(effYaw), Math.cos(effYaw) ];
-        ctx.strokeStyle = "#D44";
-        ctx.beginPath();
-        ctx.moveTo( pos[0], pos[1]);
-        ctx.lineTo( pos[0] + 2*RADIUS * lookDir[0], pos[1] - 2*RADIUS * lookDir[1]);
-        ctx.stroke();
-
-	}
 
 	function renderScene()
 	{
 	    if (!gl || !Controller.localPosition ) //not yet initialized
 	        return;
 
-        var sunPos = mapSun ? mapSun.getPosition() : [0,0,mapSkyDome.RADIUS];
+        var sunPos = mapSun ? mapSun.getPosition() : (mapSkyDome ? [0,0,mapSkyDome.RADIUS] : [0,0,5000]);
         Shadows.renderDepthTexture(sunPos, [0, 0, Controller.localPosition.z], [mapBuildings, mapApartment]);
         
         //select default frame buffer (do not render to texture);
@@ -769,11 +606,11 @@
 
 <div style="width:100%; height:100%">
 <div id="leftNavDiv" style="display: inline-block; width: 29%; height:100%; vertical-align:top">
-    <h4> Apartment Layout: </h4>    
+    <h4> Wohnungsgrundriss: </h4>    
 	<canvas id="minimapCanvas" style="width:100%; border: 1px solid black" ></canvas>
 
-    <h4> Neighborhood </h4>
-    <div id="mapDiv" > </div>
+    <h4> Nähere Umgebung </h4>
+    <div id="mapDiv" style="width:100%; height:400px;"> </div>
 
     Tag: <div id="slider-day" style="width:100%"></div>   
     Zeit: <div id="slider-time" style="width:100%"></div>   
