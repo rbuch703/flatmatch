@@ -27,9 +27,9 @@ var Shaders = {
         this.shaderSource = {};
         for (var i = 0; i < scripts.length; i++)
         {
-            var type = scripts[i].attributes["type"].nodeValue;
+            var type = scripts[i].attributes["type"].value;
             //console.log(type);
-            var id   = scripts[i].attributes["id"  ].nodeValue;
+            var id   = scripts[i].attributes["id"  ].value;
             var shaderSrc = scripts[i].textContent;
             if (type != "x-shader/x-vertex" && type != "x-shader/x-fragment")
             {

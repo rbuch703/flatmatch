@@ -41,7 +41,6 @@ Apartment.prototype.render = function(modelViewMatrix, projectionMatrix, shadowM
         
     var mvpMatrix = mat4.create();
     mat4.mul(mvpMatrix, projectionMatrix, modelViewMatrix);
-
 	gl.useProgram(Shaders.shadow);   //    Install the program as part of the current rendering state
 	gl.uniformMatrix4fv(Shaders.shadow.locations.modelViewProjectionMatrix, false, mvpMatrix);
 	gl.uniformMatrix4fv(Shaders.shadow.locations.shadowMatrix, false, shadowMvpMatrix);
@@ -53,9 +52,9 @@ Apartment.prototype.render = function(modelViewMatrix, projectionMatrix, shadowM
     gl.uniform1i(Shaders.shadow.locations.tex, 0); //select texture unit 0 as the source for the shader variable "tex" 
     gl.uniform1i(Shaders.shadow.locations.shadowTex, 1); //select texture unit 1 as the source for the shader variable "shadowTex" 
 
-	gl.enableVertexAttribArray(Shaders.shadow.locations.vertexPos); // setup vertex coordinate buffer
+	gl.enableVertexAttribArray(Shaders.shadow.locations.vertexPosition); // setup vertex coordinate buffer
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertices);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
-	gl.vertexAttribPointer(Shaders.shadow.locations.vertexPos, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
+	gl.vertexAttribPointer(Shaders.shadow.locations.vertexPosition, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
     
 	gl.enableVertexAttribArray(Shaders.shadow.locations.vertexTexCoords); //setup texcoord buffer
 	gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoords);

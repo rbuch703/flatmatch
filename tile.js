@@ -56,11 +56,11 @@ Tile.prototype.render = function(modelViewMatrix, projectionMatrix)
         return;
     
 	gl.useProgram(Shaders.textured);   //    Install the program as part of the current rendering state
-	gl.enableVertexAttribArray(Shaders.textured.locations.vertexPos); // setup vertex coordinate buffer
-	gl.enableVertexAttribArray(Shaders.textured.locations.texCoord); //setup texcoord buffer
+	gl.enableVertexAttribArray(Shaders.textured.locations.vertexPosition); // setup vertex coordinate buffer
+	gl.enableVertexAttribArray(Shaders.textured.locations.vertexTexCoords); //setup texcoord buffer
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertices);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
-	gl.vertexAttribPointer(Shaders.textured.locations.vertexPos, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
+	gl.vertexAttribPointer(Shaders.textured.locations.vertexPosition, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
     
 	gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoords);
 	gl.vertexAttribPointer(Shaders.textured.locations.vertexTexCoords, 2, gl.FLOAT, false, 0, 0);  //assigns array "texCoords" bound above as the vertex attribute "vertexTexCoords"*/
