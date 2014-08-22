@@ -14,10 +14,6 @@ function Sun(lat, lng) {
     this.dayOfYear = 229;
     this.time = 12; //noon;
 
-    this.shaderProgram = glu.createShader(  document.getElementById("shader-vs").text,
-                                            document.getElementById("sun-shader-fs").text,
-                                            ["vertexPosition", "vertexTexCoords"],
-                                            ["modelViewProjectionMatrix", "tex"] );
     this.buildGlGeometry();
 
 }
@@ -145,11 +141,14 @@ Sun.prototype.buildGlGeometry = function() {
 }
 
 Sun.prototype.render = function(modelViewMatrix, projectionMatrix) {
+
+    if (! Shaders.ready)
+        return;
         
-	gl.useProgram(this.shaderProgram);   //    Install the program as part of the current rendering state
-	gl.enableVertexAttribArray(this.shaderProgram.locations.vertexPosition); // setup vertex coordinate buffer
+	gl.useProgram( Shaders.flat );   //    Install the program as part of the current rendering state
+	gl.enableVertexAttribArray(Shaders.flat.locations.vertexPosition); // setup vertex coordinate buffer
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertices);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
-	gl.vertexAttribPointer(this.shaderProgram.locations.vertexPosition, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
+	gl.vertexAttribPointer(Shaders.flat.locations.vertexPosition, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
     
     /*if (this.shaderProgram.locations.vertexTexCoords != -1)
     {
@@ -160,7 +159,8 @@ Sun.prototype.render = function(modelViewMatrix, projectionMatrix) {
 
     var mvpMatrix = mat4.create();
     mat4.mul(mvpMatrix, projectionMatrix, modelViewMatrix);
-	gl.uniformMatrix4fv(this.shaderProgram.locations.modelViewProjectionMatrix, false, mvpMatrix);
+	gl.uniformMatrix4fv(Shaders.flat.locations.modelViewProjectionMatrix, false, mvpMatrix);
+	gl.uniform4fv( Shaders.flat.locations.color, [1.0, 1.0, 0.90, 1.0]);
     
 	gl.drawArrays(gl.TRIANGLES, 0, this.numVertices);
 }

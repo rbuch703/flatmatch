@@ -90,11 +90,6 @@ glu.init = function()
 
     glu.depthTextureExtension = gl.getExtension("WEBGL_depth_texture");
 
-    glu.depthShaderProgram = glu.createShader(  
-        document.getElementById("depth-shader-vs").text, 
-        document.getElementById("depth-shader-fs").text,
-        ["vertexPosition"],
-        ["modelViewProjectionMatrix", "lightPos"]);
 
 }
 

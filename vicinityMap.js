@@ -19,6 +19,9 @@ var VicinityMap = {
 
     updatePositionMarker: function(newPos)
     {
+        if (!this.map)  //not yet initialized
+            return;
+            
         if (this.positionMarker)
             this.map.removeLayer(this.positionMarker);
         
@@ -29,6 +32,10 @@ var VicinityMap = {
     
 	renderFrustum: function()
 	{
+        if (!this.map)  //not yet initialized
+            return;
+
+
 	    if (this.frustum)
 	    {
 	        this.map.removeLayer(this.frustum);

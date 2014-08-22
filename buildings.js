@@ -37,18 +37,6 @@ function Buildings(gl, position)
     oReq.open("get", Buildings.apiBaseUrl + "?data=" + encodeURIComponent(query), true);
     oReq.send();
     
-    var fragmentShader = navigator.userAgent.indexOf("Trident") > -1 ? 
-        document.getElementById("building-shader-fs-ie").text :
-        document.getElementById("building-shader-fs"   ).text;
-    
-    this.shaderProgram = glu.createShader(document.getElementById("building-shader-vs").text,
-                                          fragmentShader,
-                                          ["vertexPosition","vertexTexCoords", "vertexNormal"],
-                                          ["modelViewProjectionMatrix", "tex", "cameraPos"]);
-                                          
-    this.edgeShaderProgram = glu.createShader(document.getElementById("edge-shader-vs").text,
-                                              document.getElementById("edge-shader-fs").text,
-                                              ["vertexPosition"], ["modelViewProjectionMatrix"]);
 
     this.numVertices = 0;
     this.numEdgeVertices = 0;
@@ -683,7 +671,7 @@ Buildings.prototype.buildGlGeometry = function(outlines) {
 }
 
 Buildings.prototype.renderDepth = function(modelViewMatrix, projectionMatrix) {
-    if (! this.numVertices)
+    if (! this.numVertices || !Shaders.ready)
         return;
         
 
@@ -695,19 +683,19 @@ Buildings.prototype.renderDepth = function(modelViewMatrix, projectionMatrix) {
     //      building the camera is in for the shadow computation, which gives the desired effect to shading the apartment
     gl.cullFace(gl.FRONT);
 
-	gl.useProgram(glu.depthShaderProgram);   //    Install the program as part of the current rendering state
-	gl.enableVertexAttribArray(this.shaderProgram.locations.vertexPosition); // setup vertex coordinate buffer
+	gl.useProgram(Shaders.depth);   //    Install the program as part of the current rendering state
+	gl.enableVertexAttribArray(Shaders.depth.locations.vertexPosition); // setup vertex coordinate buffer
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertices);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
-	gl.vertexAttribPointer(glu.depthShaderProgram.locations.vertexPosition, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
+	gl.vertexAttribPointer(Shaders.depth.locations.vertexPosition, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
     
     var mvpMatrix = mat4.create();
     mat4.mul(mvpMatrix, projectionMatrix, modelViewMatrix);
 
-	gl.uniformMatrix4fv(glu.depthShaderProgram.locations.modelViewProjectionMatrix, false, mvpMatrix);
+	gl.uniformMatrix4fv(Shaders.depth.locations.modelViewProjectionMatrix, false, mvpMatrix);
 
-    gl.activeTexture(gl.TEXTURE0);  //successive commands (here 'gl.bindTexture()') apply to texture unit 0
-    gl.bindTexture(gl.TEXTURE_2D, null); //render geometry without texture
+    //gl.activeTexture(gl.TEXTURE0);  //successive commands (here 'gl.bindTexture()') apply to texture unit 0
+    //gl.bindTexture(gl.TEXTURE_2D, null); //render geometry without texture
     
     gl.drawArrays(gl.TRIANGLES, 0, this.numVertices);    
 
@@ -717,40 +705,40 @@ Buildings.prototype.renderDepth = function(modelViewMatrix, projectionMatrix) {
 
 
 Buildings.prototype.render = function(modelViewMatrix, projectionMatrix) {
-    if (! this.numVertices)
+    if (! this.numVertices || !Shaders.ready)
         return;
         
     var gl = this.gl;
 
 
     //draw faces
-	gl.useProgram(this.shaderProgram);   //    Install the program as part of the current rendering state
-	gl.enableVertexAttribArray(this.shaderProgram.locations.vertexPosition); // setup vertex coordinate buffer
-	gl.enableVertexAttribArray(this.shaderProgram.locations.vertexTexCoords); //setup texcoord buffer
-	gl.enableVertexAttribArray(this.shaderProgram.locations.vertexNormal); //setup texcoord buffer
+	gl.useProgram(Shaders.building);   //    Install the program as part of the current rendering state
+	gl.enableVertexAttribArray(Shaders.building.locations.vertexPosition); // setup vertex coordinate buffer
+	gl.enableVertexAttribArray(Shaders.building.locations.vertexTexCoords); //setup texcoord buffer
+	gl.enableVertexAttribArray(Shaders.building.locations.vertexNormal); //setup texcoord buffer
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertices);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
-	gl.vertexAttribPointer(this.shaderProgram.locations.vertexPosition, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
+	gl.vertexAttribPointer(Shaders.building.locations.vertexPosition, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
     
 	gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoords);
-	gl.vertexAttribPointer(this.shaderProgram.locations.vertexTexCoords, 3, gl.FLOAT, false, 0, 0);  //assigns array "texCoords" bound above as the vertex attribute "vertexTexCoords"
+	gl.vertexAttribPointer(Shaders.building.locations.vertexTexCoords, 3, gl.FLOAT, false, 0, 0);  //assigns array "texCoords" bound above as the vertex attribute "vertexTexCoords"
 
     // can apparently be -1 if the variable is not used inside the shader
-    if (this.shaderProgram.locations.vertexNormal > -1)
+    if (Shaders.building.locations.vertexNormal > -1)
     {
 	    gl.bindBuffer(gl.ARRAY_BUFFER, this.normals);
-	    gl.vertexAttribPointer(this.shaderProgram.locations.vertexNormal, 3, gl.FLOAT, false, 0, 0);  //assigns array "normals"
+	    gl.vertexAttribPointer(Shaders.building.locations.vertexNormal, 3, gl.FLOAT, false, 0, 0);  //assigns array "normals"
 	}
 
     var mvpMatrix = mat4.create();
     mat4.mul(mvpMatrix, projectionMatrix, modelViewMatrix);
 
-    gl.uniform1i(this.shaderProgram.locations.tex, 0); //select texture unit 0 as the source for the shader variable "tex" 
-	gl.uniformMatrix4fv(this.shaderProgram.locations.modelViewProjectionMatrix, false, mvpMatrix);
+    gl.uniform1i(Shaders.building.locations.tex, 0); //select texture unit 0 as the source for the shader variable "tex" 
+	gl.uniformMatrix4fv(Shaders.building.locations.modelViewProjectionMatrix, false, mvpMatrix);
 
     var pos = Controller.localPosition;
     //console.log(pos.x, pos.y, pos.z);
-    gl.uniform3f(this.shaderProgram.locations.cameraPos, pos.x, pos.y, pos.z);
+    gl.uniform3f(Shaders.building.locations.cameraPos, pos.x, pos.y, pos.z);
 
     gl.activeTexture(gl.TEXTURE0);  //successive commands (here 'gl.bindTexture()') apply to texture unit 0
     gl.bindTexture(gl.TEXTURE_2D, null); //render geometry without texture
@@ -765,15 +753,17 @@ Buildings.prototype.render = function(modelViewMatrix, projectionMatrix) {
     
 
     //step 2: draw outline
-    gl.useProgram(this.edgeShaderProgram);   //    Install the program as part of the current rendering state
-	gl.enableVertexAttribArray(this.edgeShaderProgram.locations.vertexPosition); // setup vertex coordinate buffer
+    gl.useProgram(Shaders.flat);   //    Install the program as part of the current rendering state
+	gl.enableVertexAttribArray(Shaders.flat.locations.vertexPosition); // setup vertex coordinate buffer
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.edgeVertices);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
-	gl.vertexAttribPointer(this.edgeShaderProgram.locations.vertexPosition, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
+	gl.vertexAttribPointer(Shaders.flat.locations.vertexPosition, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
 
     var mvpMatrix = mat4.create();
     mat4.mul(mvpMatrix, projectionMatrix, modelViewMatrix);
-	gl.uniformMatrix4fv(this.edgeShaderProgram.locations.modelViewProjectionMatrix, false, mvpMatrix);
+	gl.uniformMatrix4fv(Shaders.flat.locations.modelViewProjectionMatrix, false, mvpMatrix);
+	
+	gl.uniform4fv( Shaders.flat.locations.color, [0.2, 0.2, 0.2, 1.0]);
 
     gl.drawArrays(gl.LINES, 0, this.numEdgeVertices);
     

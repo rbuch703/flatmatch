@@ -1,12 +1,11 @@
 "use strict"
 
-function Tile( tileX, tileY, level, shaderProgram, mapLayer) 
+function Tile( tileX, tileY, level, mapLayer) 
 {
 
     this.level = level;
     this.x = tileX;
     this.y = tileY;
-    this.shaderProgram = shaderProgram;
     this.texId = null;
     this.mapLayer = mapLayer;
     
@@ -53,24 +52,24 @@ function Tile( tileX, tileY, level, shaderProgram, mapLayer)
 Tile.prototype.render = function(modelViewMatrix, projectionMatrix) 
 {
     //texture is not yet ready --> cannot render
-    if (this.texId === null)
+    if (this.texId === null || !Shaders.ready)
         return;
     
-	gl.useProgram(this.shaderProgram);   //    Install the program as part of the current rendering state
-	gl.enableVertexAttribArray(this.shaderProgram.locations.vertexPos); // setup vertex coordinate buffer
-	gl.enableVertexAttribArray(this.shaderProgram.locations.texCoord); //setup texcoord buffer
+	gl.useProgram(Shaders.textured);   //    Install the program as part of the current rendering state
+	gl.enableVertexAttribArray(Shaders.textured.locations.vertexPos); // setup vertex coordinate buffer
+	gl.enableVertexAttribArray(Shaders.textured.locations.texCoord); //setup texcoord buffer
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertices);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
-	gl.vertexAttribPointer(this.shaderProgram.locations.vertexPos, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
+	gl.vertexAttribPointer(Shaders.textured.locations.vertexPos, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
     
 	gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoords);
-	gl.vertexAttribPointer(this.shaderProgram.locations.vertexTexCoords, 2, gl.FLOAT, false, 0, 0);  //assigns array "texCoords" bound above as the vertex attribute "vertexTexCoords"*/
+	gl.vertexAttribPointer(Shaders.textured.locations.vertexTexCoords, 2, gl.FLOAT, false, 0, 0);  //assigns array "texCoords" bound above as the vertex attribute "vertexTexCoords"*/
 
-    gl.uniform1i(this.shaderProgram.locations.tex, 0); //select texture unit 0 as the source for the shader variable "tex" 
+    gl.uniform1i(Shaders.textured.locations.tex, 0); //select texture unit 0 as the source for the shader variable "tex" 
     
     var mvpMatrix = mat4.create();
     mat4.multiply(mvpMatrix, projectionMatrix, modelViewMatrix);
-	gl.uniformMatrix4fv(this.shaderProgram.locations.modelViewProjectionMatrix, false, mvpMatrix);
+	gl.uniformMatrix4fv(Shaders.textured.locations.modelViewProjectionMatrix, false, mvpMatrix);
 
     gl.enable(gl.POLYGON_OFFSET_FILL);  //to prevent z-fighting between rendered edges and faces
     gl.activeTexture(gl.TEXTURE0);  //successive commands (here 'gl.bindTexture()') apply to texture unit 0

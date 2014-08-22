@@ -1,0 +1,209 @@
+<!DOCTYPE html> 
+
+<shaders>
+<script id="depth-shader-vs" type="x-shader/x-vertex">
+    #line 1 101
+	precision mediump float;
+    uniform mat4 modelViewProjectionMatrix;
+	attribute vec3 vertexPosition;
+
+	void main(void) {
+		gl_Position = modelViewProjectionMatrix * vec4(vertexPosition, 1.0);
+    }
+</script>
+
+<script id="depth-shader-fs" type="x-shader/x-fragment">
+    #line 1 102
+	precision mediump float;
+    
+	void main(void) {
+        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);//vec4(vec3(depth), 1.0);
+	}
+</script>
+
+
+<script id="building-shader-fs" type="x-shader/x-fragment">
+<![CDATA[
+    #line 1 105
+	precision mediump float;
+    varying vec3 texCoordV;
+    varying vec3 normal;
+    varying vec3 worldPosition;
+    
+    uniform vec3 cameraPos;
+    //uniform float height;
+	void main(void) {
+	    const float c = 0.02;
+
+        vec3 vView = normalize( cameraPos - worldPosition); //direction vector from surface to camera (camera is always at (0,0,0) )
+        if (gl_FragCoord.z < 0.95)
+        {
+            discard;
+            return;
+        }
+        float diffuse = abs( 0.5 * dot(vView, normal) );
+
+        //gl_FragColor = vec4( (normal + 1.0)/2.0, 1.0);
+        gl_FragColor = diffuse > 0.0 ? vec4( vec3(diffuse+0.3), 1.0): vec4(-diffuse+0.3, 0.0, 0.0, 1.0);
+        
+        if (texCoordV.z == 0.0) //HACK: z==0 --> building height was just guessed --> tint it red
+            gl_FragColor = gl_FragColor * vec4(1.0, 0.9, 0.95, 1.0);
+
+	}
+]]>
+</script>
+
+<!-- As of version 11, Internet Explorer apparently does not support the "discard" keyword (error WEBGL11102),
+     So we have to provide a shader version without it-->
+<script id="building-shader-fs-ie" type="x-shader/x-fragment">
+    #line 1 106
+	precision mediump float;
+    varying vec3 texCoordV;
+    varying vec3 normal;
+    varying vec3 worldPosition;
+    
+    uniform vec3 cameraPos;
+    //uniform float height;
+	void main(void) {
+	    const float c = 0.02;
+
+        vec3 vView = normalize( cameraPos - worldPosition); //direction vector from surface to camera (camera is always at (0,0,0) )
+        float diffuse = abs( 0.5 * dot(vView, normal) );
+
+        //gl_FragColor = vec4( (normal + 1.0)/2.0, 1.0);
+        gl_FragColor = diffuse > 0.0 ? vec4( vec3(diffuse+0.3), 1.0): vec4(-diffuse+0.3, 0.0, 0.0, 1.0);
+        
+        if (texCoordV.z == 0.0) //HACK: z==0 --> building height was just guessed --> tint it red
+            gl_FragColor = gl_FragColor * vec4(1.0, 0.9, 0.95, 1.0);
+
+	}
+</script>
+
+<script id="texture-shader-fs" type="x-shader/x-fragment">
+    #line 1 103
+    precision mediump float;
+    varying vec2 texCoordV;
+    uniform sampler2D tex;
+	void main(void) {
+        gl_FragColor = texture2D(tex, texCoordV.st);
+	}
+</script>
+
+
+<script id="texture-shader-vs" type="x-shader/x-vertex">
+    #line 1 107
+	attribute vec3 vertexPosition;
+    attribute vec2 vertexTexCoords;  			
+	
+	uniform mat4 modelViewProjectionMatrix;
+
+    varying vec2 texCoordV;
+
+	void main(void) {
+		gl_Position = modelViewProjectionMatrix * vec4(vertexPosition, 1.0);
+		texCoordV = vertexTexCoords;
+	}
+</script>
+
+<script id="shadowed-shader-vs" type="x-shader/x-vertex">
+    #line 1 108
+	attribute vec3 vertexPosition;
+    attribute vec2 vertexTexCoords;  			
+    attribute vec3 normalIn;
+	
+	uniform mat4 modelViewProjectionMatrix;
+	uniform mat4 shadowMatrix;
+
+    varying vec2 texCoordV;
+    varying vec4 shadowTexPosition;
+    varying vec3 normalOut;
+
+	void main(void) {
+		gl_Position = modelViewProjectionMatrix * vec4(vertexPosition, 1.0);
+		shadowTexPosition = shadowMatrix * vec4(vertexPosition, 1.0);
+		texCoordV = vertexTexCoords;
+		normalOut = normalIn;
+	}
+</script>
+
+<script id="shadowed-texture-shader-fs" type="x-shader/x-fragment">
+<![CDATA[
+    #line 1 109
+	precision mediump float;
+	
+	
+    varying vec2 texCoordV;
+    varying vec4 shadowTexPosition;
+    varying vec3 normalOut;
+    
+    uniform sampler2D tex;
+    uniform sampler2D shadowTex;    //light source depth texture
+	uniform vec3 sunDir;
+	void main(void) {
+	    vec4 col1 = texture2D(tex, texCoordV.st);
+	    //shadow position in normalized device coordinates
+        vec3 shadowNDC = (shadowTexPosition.xyz / shadowTexPosition.w) * 0.5 + 0.5;
+	    
+	    
+	    float depth = shadowNDC.z;
+	    int inLight = 0;
+	    const float delta = 0.5/2048.0;
+	    if (texture2D(shadowTex, vec2(shadowNDC.s,         shadowNDC.t        ) ).r + 0.00002 >= depth) inLight++;
+	    /*if (texture2D(shadowTex, vec2(shadowNDC.s,         shadowNDC.t + delta) ).r + 0.00001 >= depth) inLight++;
+	    if (texture2D(shadowTex, vec2(shadowNDC.s + delta, shadowNDC.t        ) ).r + 0.00001 >= depth) inLight++;
+	    if (texture2D(shadowTex, vec2(shadowNDC.s + delta, shadowNDC.t + delta) ).r + 0.00001 >= depth) inLight++;*/
+	    //float normDepth = a + b / 
+	    
+	    float sunDiff = dot(sunDir, normalOut);
+        if (( sunDiff < 0.00001) || (inLight == 0))
+            gl_FragColor = col1;
+        else		    
+		    gl_FragColor = vec4(col1.rgb*(1.0 + float(inLight)/2.5 * sunDiff), 1.0);
+	}
+]]>
+</script>
+
+
+<script id="building-shader-vs" type="x-shader/x-vertex">
+    #line 1 110
+	attribute vec3 vertexPosition;
+    attribute vec3 vertexTexCoords; 			
+    attribute vec3 vertexNormal;
+	
+	uniform mat4 modelViewProjectionMatrix;
+
+    varying vec3 texCoordV;
+    varying vec3 normal;
+    varying vec3 worldPosition;
+
+	void main(void) {
+		gl_Position = modelViewProjectionMatrix * vec4(vertexPosition, 1.0);
+		worldPosition = vertexPosition; //pass through untransformed
+		texCoordV = vertexTexCoords;
+		normal = vertexNormal;
+	}
+</script>
+
+<script id="flat-shader-vs" type="x-shader/x-vertex">
+    #line 1 111
+	attribute vec3 vertexPosition;
+	
+	uniform mat4 modelViewProjectionMatrix;
+
+	void main(void) {
+		gl_Position = modelViewProjectionMatrix * vec4(vertexPosition, 1.0);
+	}
+</script>
+
+<script id="flat-shader-fs" type="x-shader/x-fragment">
+    #line 1 112
+	precision mediump float;
+    
+    uniform vec4 color;
+	void main(void) {
+	
+        gl_FragColor = color;
+	}
+</script>
+</shaders>
+

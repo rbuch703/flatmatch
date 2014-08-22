@@ -1,10 +1,6 @@
 "use strict"
 
 function MapLayer(gl, position) {
-    this.shaderProgram = glu.createShader( document.getElementById("shader-vs").text, 
-                                       document.getElementById("texture-shader-fs").text,
-                                       ["vertexPosition","vertexTexCoords"], 
-                                       ["modelViewProjectionMatrix", "tex"]);
     
     this.createTileHierarchy(  );
 
@@ -135,7 +131,7 @@ MapLayer.prototype.createTileHierarchy = function()
     console.log("map layer consists of %s tiles", tileList.length);
     this.tiles = [];
     for (var i in tileList)
-        this.tiles.push(new Tile(tileList[i][1], tileList[i][2], tileList[i][3], this.shaderProgram, this ));
+        this.tiles.push(new Tile(tileList[i][1], tileList[i][2], tileList[i][3], this ));
 }
 
 MapLayer.prototype.render = function(modelViewMatrix, projectionMatrix) 
