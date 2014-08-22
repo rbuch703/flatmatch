@@ -46,6 +46,7 @@
     <script type="text/javascript" src="controller.js"></script>
     <script type="text/javascript" src="poly2tri.js"></script>
     <script type="text/javascript" src="sun.js"></script>
+    <script type="text/javascript" src="shadows.js"></script>
 
 	<script type="text/javascript" src="gl-matrix.js" ></script>
 	<script type="text/javascript" src="glu.js" ></script>
@@ -283,6 +284,30 @@
     
     <script type="text/javascript">
     "use strict"
+
+    //var narrowLayout;
+
+    var map;
+    var mapPlane;
+    var mapBuildings;
+    var mapSkyDome;
+    var mapApartment;
+    var mapSun;
+    
+    var mapFrustum;
+    
+    //var colorTexture, depthTexture, framebuffer;
+    //var shadowMvpMatrix = mat4.create();
+    
+    var gl;
+    
+    var positionMarker;
+    var fieldOfView = 90/16*9;
+    var layoutId;// = 158;
+    var rowId;
+    var OFFER_REST_BASE_URL = "http://rbuch703.de:1080/rest";
+    //var OFFER_REST_BASE_URL = "http://localhost:1080/rest"
+
   
     //pasted from controller.js; FIXME: find better common place
     function toDictionary (queryString)
@@ -353,24 +378,23 @@
         L.control.scale({imperial:false, position:"topright"}).addTo(map);
 	    initGl();  //initialize webGL canvas
 
+        if (!gl)
+            return;
+
         /* prevention of default event handling is required for:
          * - 'mousedown': otherwise dragging the mouse cursor beyond the canvas would select the page text in chrome
          * - 'keydown': otherwise using the cursor keys for navigation would also scroll the page
          */
 
-        if (gl)
-        {
-		    //register event handlers
-		    webGlCanvas.addEventListener("mousedown",   function(ev) {ev.preventDefault(); Controller.onMouseDown(ev);}, false);
-		    webGlCanvas.addEventListener("mouseup",     function(ev) {Controller.onMouseUp(ev);},   false);
-		    webGlCanvas.addEventListener("mouseout",    function(ev) {Controller.onMouseUp(ev);},   false);
-		    webGlCanvas.addEventListener("mousemove",   function(ev) {Controller.onMouseMove(ev);}, false);
-            webGlCanvas.addEventListener("touchstart",  function(ev) {Controller.onTouchDown(ev);}, false);
-            webGlCanvas.addEventListener("touchcancel", function(ev) {Controller.onTouchEnd(ev);},  false);
-            webGlCanvas.addEventListener("touchend",    function(ev) {Controller.onTouchEnd(ev);},  false);
-            webGlCanvas.addEventListener("touchleave",  function(ev) {Controller.onTouchEnd(ev);},  false);
-            webGlCanvas.addEventListener("touchmove",   function(ev) {Controller.onTouchMove(ev);}, false);
-        }
+	    webGlCanvas.addEventListener("mousedown",   function(ev) {ev.preventDefault(); Controller.onMouseDown(ev);}, false);
+	    webGlCanvas.addEventListener("mouseup",     function(ev) {Controller.onMouseUp(ev);},   false);
+	    webGlCanvas.addEventListener("mouseout",    function(ev) {Controller.onMouseUp(ev);},   false);
+	    webGlCanvas.addEventListener("mousemove",   function(ev) {Controller.onMouseMove(ev);}, false);
+        webGlCanvas.addEventListener("touchstart",  function(ev) {Controller.onTouchDown(ev);}, false);
+        webGlCanvas.addEventListener("touchcancel", function(ev) {Controller.onTouchEnd(ev);},  false);
+        webGlCanvas.addEventListener("touchend",    function(ev) {Controller.onTouchEnd(ev);},  false);
+        webGlCanvas.addEventListener("touchleave",  function(ev) {Controller.onTouchEnd(ev);},  false);
+        webGlCanvas.addEventListener("touchmove",   function(ev) {Controller.onTouchMove(ev);}, false);
 
         document.addEventListener("keydown", function(ev) { if (ev.keyCode == 38 || ev.keyCode == 40) ev.preventDefault(); Controller.onKeyDown(ev);},  false);
         document.addEventListener("keyup",   function(ev) {Controller.onKeyUp(ev);},  false);
@@ -396,12 +420,8 @@
     
     function onSunPositionChanged(day, time)
     {
-        //console.log("new sun position is %s/%s", day, time);
-        mapSun.dayOfYear = day;
-        mapSun.time = time;
-        mapSun.buildGlGeometry();
-        //renderDepthTexture();
-        depthTextureDirty = true;
+        mapSun.setMomentInTime(day, time);
+        Shadows.dirty = true;
         scheduleFrameRendering();
     }
         
@@ -451,30 +471,6 @@
 
     }   
     
-    var narrowLayout;
-
-    var map;
-    var mapPlane;
-    var mapBuildings;
-    var mapSkyDome;
-    var mapApartment;
-    var mapSun;
-    
-    var mapFrustum;
-    
-    var colorTexture, depthTexture, framebuffer;
-    var shadowMvpMatrix = mat4.create();
-    
-    var depthTextureSize = 1024*2;
-    var depthTextureDirty = true;
-    var gl;
-    
-    var positionMarker;
-    var fieldOfView = 90/16*9;
-    var layoutId;// = 158;
-    var rowId;
-    var OFFER_REST_BASE_URL = "http://rbuch703.de:1080/rest";
-    //var OFFER_REST_BASE_URL = "http://localhost:1080/rest"
     
     function updatePositionMarker()
     {
@@ -519,7 +515,7 @@
          * to show the whole 3D view. For the narrow layout, the 3D view is the last important part on the page and should
          * align with the bottom of the page to allow the map to be shown above. */
         
-        webGlCanvas.scrollIntoView( narrowLayout ? !narrowLayout.matches : true);
+        //webGlCanvas.scrollIntoView( narrowLayout ? !narrowLayout.matches : true);
         scheduleFrameRendering();
     }
     
@@ -577,14 +573,6 @@
             scheduleFrameRendering();
     }
 
-    function animateSun()
-    {
-        mapSun.time = (mapSun.time + 0.05) % 24;
-        mapSun.buildGlGeometry();
-        scheduleFrameRendering();
-        window.setTimeout( animateSun, 50); 
-    }
-	
 	function renderFrustum()
 	{
 	    if (!gl)
@@ -643,7 +631,10 @@
 	        contentDiv.removeChild(webGlCanvas);
 			return;
 		}
+		
 		glu.init();
+		Shadows.init();
+		
 		//gl = WebGLDebugUtils.makeDebugContext(gl);
 		
 		gl.clearColor(0.5, 0.5, 0.5, 1.0);
@@ -657,30 +648,6 @@
 	
         mapSkyDome = new SkyDome(gl);
         mapSkyDome.onLoaded = scheduleFrameRendering;
-
-        // Create a color texture for use with the depth shader
-        colorTexture = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, colorTexture);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, depthTextureSize, depthTextureSize, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-
-        // Create the depth texture
-        depthTexture = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, depthTexture);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT, depthTextureSize, depthTextureSize, 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_INT, null);
-
-        framebuffer = gl.createFramebuffer();
-        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, colorTexture, 0);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, depthTexture, 0);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
 	}
 	
@@ -748,52 +715,13 @@
 
 	}
 
-    function renderDepthTexture()
-    {
-        //the sun is the camera for this render pass, so we cannot render without knowing its position
-        if (!mapSun) 
-            return;
-
-        //use created texture-backed framebuffer as render target (and not the default buffer that is output to screen)
-        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-        
-        //gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, colorTexture, 0);
-        //gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, depthTexture, 0);
-		gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
-		gl.viewport(0, 0, depthTextureSize, depthTextureSize);
-
-        var modelViewMatrix = mat4.create();
-        var pos = mapSun.getPosition();
-        pos[1] = -pos[1];
-        mat4.lookAt(modelViewMatrix, pos, [0, 0, Controller.localPosition.z], [0,0,1]);
-    	mat4.scale(modelViewMatrix, modelViewMatrix, [1,-1,1]);//negate y coordinate to make positive y go downward
-	    var projectionMatrix = mat4.create();
-	    mat4.perspective(projectionMatrix, fieldOfView/180*Math.PI/300, webGlCanvas.width / webGlCanvas.height, 3000, 5100.0);
-
-        // the apartment shader needs this later to access the shadow buffer
-        shadowMvpMatrix = mat4.create();
-        mat4.mul(shadowMvpMatrix, projectionMatrix, modelViewMatrix);
-
-        gl.disable(gl.CULL_FACE);
-
-        if (mapApartment)
-            mapApartment.renderDepth(modelViewMatrix, projectionMatrix);
-        
-        if (mapBuildings)
-            mapBuildings.renderDepth(modelViewMatrix, projectionMatrix);
-
-    }
-	
 	function renderScene()
 	{
 	    if (!gl || !Controller.localPosition ) //not yet initialized
 	        return;
 
-        if (depthTextureDirty)
-        {
-            renderDepthTexture();
-            depthTextureDirty = false;
-        }
+        var sunPos = mapSun ? mapSun.getPosition() : [0,0,mapSkyDome.RADIUS];
+        Shadows.renderDepthTexture(sunPos, [0, 0, Controller.localPosition.z], [mapBuildings, mapApartment]);
         
         //select default frame buffer (do not render to texture);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -806,13 +734,14 @@
 
         gl.enable(gl.CULL_FACE);
 
-        //note: mapApartment has to be rendered last, as it clears the z-buffer to work
-        //      around some artifacts. Rendering anything afterwards will likely overdraw
-        //      portions of the image even though they are close to the camera
+        /*note: mapApartment has to be rendered last, as it clears the z-buffer to work
+         *      around some artifacts caused by building geometry intersecting with apartment geometry.
+         *      Rendering anything afterwards will likely overdraw
+         *      portions of the image even though they are close to the camera */
         var renderItems = [mapPlane, mapBuildings, mapSkyDome, mapSun, mapApartment];
         for (var i in renderItems)
             if (renderItems[i])
-                renderItems[i].render(modelViewMatrix, projectionMatrix, shadowMvpMatrix);
+                renderItems[i].render(modelViewMatrix, projectionMatrix, Shadows.shadowMvpMatrix);
 		//gl.flush();
 	}
 	

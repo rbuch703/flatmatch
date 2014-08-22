@@ -72,7 +72,7 @@ Apartment.prototype.render = function(modelViewMatrix, projectionMatrix, shadowM
 
 
     gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, depthTexture);
+    gl.bindTexture(gl.TEXTURE_2D, Shadows.depthTexture);
 
     
 	for (var i = 0; i < this.numVertices; i+=6)
@@ -87,6 +87,10 @@ Apartment.prototype.renderDepth = function(modelViewMatrix, projectionMatrix)
 {
     if (!this.vertices)
         return;
+
+    //all apartment walls are only one-sided. This is fine for rendering, but for computing the shadow depths,
+    //the away-facing wall segments also have to be considered
+    gl.disable(gl.CULL_FACE);
         
     var mvpMatrix = mat4.create();
     mat4.mul(mvpMatrix, projectionMatrix, modelViewMatrix);
@@ -100,6 +104,8 @@ Apartment.prototype.renderDepth = function(modelViewMatrix, projectionMatrix)
 	gl.vertexAttribPointer(this.shaderProgram.locations.vertexPos, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
         
     gl.drawArrays(gl.TRIANGLES, 0, this.numVertices);
+    gl.enable(gl.CULL_FACE);
+
 }
 
 			
@@ -191,8 +197,6 @@ Apartment.prototype.processLayout = function(segments)
     }
 
     this.numVertices = (this.vertices.length / 3) | 0;
-    console.log("number of normal floats: %s; %s", this.normals.length, this.normals[0]);
-    console.log("number of vertex floats: %s", this.vertices.length);
     
     this.vertices = glu.createArrayBuffer(this.vertices); //convert to webgl array buffer
     this.texCoords= glu.createArrayBuffer(this.texCoords);

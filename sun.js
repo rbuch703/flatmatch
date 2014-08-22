@@ -22,6 +22,17 @@ function Sun(lat, lng) {
 
 }
 
+Sun.prototype.setMomentInTime = function(day, time)
+{
+    if (day)
+        this.dayOfYear = day;
+    if (time)
+        this.time = time;
+        
+    if (day || time)
+        this.buildGlGeometry();
+}
+
 // source of computation: http://www.pveducation.org/pvcdrom/properties-of-sunlight/suns-position
 Sun.prototype.getAngles = function() {
     var dtGmt = 1; //usually one hour time difference to GMT
