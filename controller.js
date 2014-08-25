@@ -98,8 +98,15 @@ var Controller = {
 
     turn: function(yaw, pitch)
     {
+        this.viewAngleYaw = this.viewAngleYaw % 360;
+        
         this.viewAngleYaw += yaw;
         this.viewAnglePitch += pitch;
+        
+        if (this.viewAnglePitch > 60)
+            this.viewAnglePitch = 60;
+        if (this.viewAnglePitch < -60)
+            this.viewAnglePitch = -60;
     },
     
     move: function(dx, dy)
@@ -123,7 +130,6 @@ var Controller = {
 	{
         var now = new Date().getTime();
         var dt = now - this.lastKeyEventProcessed;
-        this.lastKeyEventProcessed = now;
 
         if (this.lastKeyEventProcessed === null)
         {
@@ -131,6 +137,13 @@ var Controller = {
             return;
         }
 
+        this.lastKeyEventProcessed = now;
+
+        if (dt > 1000)
+        {
+            console.log("[WARN] extensive time step (%s ms)", dt);
+            dt = 1000;
+        }
 
         var dy = dt/400 * getSign(("W" in this.keysDown) || ("up" in this.keysDown), 
                                   ("S" in this.keysDown) || ("down" in this.keysDown));
@@ -148,7 +161,9 @@ var Controller = {
 
         this.turn(turnX, turnY);
 
-        
+        if (! this.keysStillPressed() && this.down == null)
+            this.lastKeyEventProcessed = null;
+            
         this.updateHistoryState();
 	},
 	
