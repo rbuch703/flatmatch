@@ -2,6 +2,9 @@
 
 function Apartment(id, position, yaw, height) {
 
+    this.yawShift = yaw;
+    this.heightOffset = height;
+
     this.textures = [];
     
     this.layoutId = id;
@@ -15,9 +18,19 @@ function Apartment(id, position, yaw, height) {
         if (this.readyState != 4 || this.response == null)
             return;
 
-        var tmp = aptTmp.loadLayout( JSON.parse(this.response), position, yaw, height);
-        aptTmp.metadata = this.response;
-        aptTmp.processLayout(tmp);
+        
+        var response = JSON.parse(this.response);
+        aptTmp.scale = response.scale;
+        aptTmp.startingPos = response.geometry.startingPosition;
+        aptTmp.startingPos[2] = 0;
+        
+        var walls = response.geometry.geometry;
+        var box   = response.geometry.box;
+        if (box == undefined)
+            box = [];
+        aptTmp.repositionGeometry(walls, box, position);
+        //aptTmp.metadata = this.response;
+        aptTmp.buildGlGeometry(walls, box);
         
         if (aptTmp.onLoaded)
             aptTmp.onLoaded();
@@ -75,6 +88,20 @@ Apartment.prototype.render = function(modelViewMatrix, projectionMatrix, shadowM
         gl.bindTexture(gl.TEXTURE_2D, this.textures[i/6]);
 	    gl.drawArrays(gl.TRIANGLES, i, 6);
     }
+    
+    //step 2: render box (outside) geometry
+	gl.useProgram( Shaders.flat );   //    Install the program as part of the current rendering state
+	gl.enableVertexAttribArray(Shaders.flat.locations.vertexPosition); // setup vertex coordinate buffer
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.boxVertices);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
+	gl.vertexAttribPointer(Shaders.flat.locations.vertexPosition, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
+    
+	gl.uniformMatrix4fv(Shaders.flat.locations.modelViewProjectionMatrix, false, mvpMatrix);
+	gl.uniform4fv( Shaders.flat.locations.color, [0.5, 0.5, 0.6, 1.0]);
+    
+	gl.drawArrays(gl.TRIANGLES, 0, this.numBoxVertices);
+
+    
+    
 }
 	
 Apartment.prototype.renderDepth = function(modelViewMatrix, projectionMatrix)
@@ -94,11 +121,19 @@ Apartment.prototype.renderDepth = function(modelViewMatrix, projectionMatrix)
     gl.uniform3fv(Shaders.depth.locations.lightPos, mapSun.getPosition());
 
 	gl.enableVertexAttribArray(Shaders.depth.locations.vertexPos); // setup vertex coordinate buffer
+
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertices);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
 	gl.vertexAttribPointer(Shaders.depth.locations.vertexPos, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
-        
     gl.drawArrays(gl.TRIANGLES, 0, this.numVertices);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.boxVertices);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
+	gl.vertexAttribPointer(Shaders.depth.locations.vertexPos, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
+    gl.drawArrays(gl.TRIANGLES, 0, this.numBoxVertices);
+
+
     gl.enable(gl.CULL_FACE);
+    
+    
 
 }
 
@@ -151,65 +186,92 @@ Apartment.prototype.requestTexture = function(layoutId, textureId, segmentData)
     var image = new Image();
     image.id = textureId;
     image.apartment = this;
-
     image.onload = function() { this.apartment.handleLoadedTexture(image); };
-
     /*image.src = "tiles/tile_"+j+".png"; */
     image.crossOrigin = "anonymous";
     image.src = OFFER_REST_BASE_URL + "/get/texture/" + layoutId + "/" + textureId;
 }
-			
+	
+Apartment.getTrianglesVertices = function(seg)
+{
+    /* D-C   
+     * |/|
+     * A-B  */
+    var A = seg.pos;
+    /* Scale width and height by 1.0001 to make geometry overlap slightly, in order to to get rid 
+     * of pixel-sized holes between individual triangles caused by numerical inaccuracy.
+     * Note that while these computations are done in JavaScript's 'Number' type (i.e. IEEE-754 double),
+     *  the geometry is uploaded to OpenGl as IEEE-754 float, so the computation has to account for 'float' accuracy.
+     */
+    var w = [seg.width[0]*1.0001, seg.width[1] * 1.0001, seg.width[2]*1.0001];
+    var B = [A[0]+w[0], A[1]+w[1], A[2]+w[2]];
+    var h = [seg.height[0]*1.0001, seg.height[1] * 1.0001, seg.height[2]*1.0001];
+    var C = [B[0]+h[0], B[1]+h[1], B[2]+h[2]];
+    var D = [A[0]+h[0], A[1]+h[1], A[2]+h[2]];
+
+    return [A, B, C, A, C, D];
+}
+
 /**
  *  creates the 3D GL geometry scene.
  */
-Apartment.prototype.processLayout = function(segments)
+Apartment.prototype.buildGlGeometry = function(walls, box)
 {
-    this.vertices = [];
-    this.texCoords= [];
-    this.normals  = [];
-    for (var i in segments)
+    var vertices = [];
+    var texCoords= [];
+    var normals  = [];
+    for (var i in walls)
     {
-        var seg = segments[i];
-        /* D-C   
-         * |/|
-         * A-B  */
-        var A = segments[i].pos;
-        var w = segments[i].width;
-        var B = [A[0]+w[0], A[1]+w[1], A[2]+w[2]];
-        var h = segments[i].height;
-        var C = [B[0]+h[0], B[1]+h[1], B[2]+h[2]];
-        var D = [A[0]+h[0], A[1]+h[1], A[2]+h[2]];
-        
-        var verts = [].concat(A, B, C, /**/ A, C, D);
-        [].push.apply(this.vertices, verts);
+        var verts = Apartment.getTrianglesVertices(walls[i]);
+        [].push.apply(vertices, [].concat.apply([],verts));
         
         var coords = [].concat([0,0], [1,0], [1,1], /**/ [0,0], [1,1], [0,1]);
-        [].push.apply(this.texCoords, coords);
+        [].push.apply(texCoords, coords);
         
-        var N = getNormal(A, B, C);
-        [].push.apply(this.normals, [].concat(N, N, N, N, N, N) );
+        var N = getNormal( verts[0], verts[1], verts[2]);
+        [].push.apply(normals, [].concat(N, N, N, N, N, N) );
     }
 
-    this.numVertices = (this.vertices.length / 3) | 0;
+    this.numVertices = (vertices.length / 3) | 0;
     
-    this.vertices = glu.createArrayBuffer(this.vertices); //convert to webgl array buffer
-    this.texCoords= glu.createArrayBuffer(this.texCoords);
-    this.normals  = glu.createArrayBuffer(this.normals);
+    this.vertices = glu.createArrayBuffer(vertices); //convert to webgl array buffer
+    this.texCoords= glu.createArrayBuffer(texCoords);
+    this.normals  = glu.createArrayBuffer(normals);
     
     for (var i = 0; i < this.numVertices/6; i++) {
-        this.requestTexture(this.layoutId, i, segments[i]);
+        this.requestTexture(this.layoutId, i, walls[i]);
     }
-	
-    //renderScene();
+
+    var boxVertices = [];
+    for (var i in box)
+    {
+        var verts = Apartment.getTrianglesVertices(box[i]);
+        [].push.apply(boxVertices, [].concat.apply([], verts));
+    }    
+	this.numBoxVertices = (boxVertices.length / 3) | 0;
+	this.boxVertices = glu.createArrayBuffer(boxVertices);
+	//console.log(this.numBoxVertices, boxVertices);
 }
 			
-function getAABB( segments)
+function getAABB( segments, aabbIn)
 {
-    if (segments.length < 1) return [];
-    var min_x = segments[0].pos[0];
-    var max_x = segments[0].pos[0];
-    var min_y = segments[0].pos[1];
-    var max_y = segments[0].pos[1];
+    if (segments.length < 1) 
+        return aabbIn;
+        
+    if (aabbIn)
+    {
+        var min_x = aabbIn.min_x;
+        var max_x = aabbIn.max_x;
+        var min_y = aabbIn.min_y;
+        var max_y = aabbIn.max_y;
+    }
+    else
+    {
+        var min_x = segments[0].pos[0];
+        var max_x = segments[0].pos[0];
+        var min_y = segments[0].pos[1];
+        var max_y = segments[0].pos[1];
+    }
     
     for (var i in segments)
     {
@@ -231,73 +293,69 @@ function getAABB( segments)
 }
 
 
-Apartment.prototype.loadLayout = function(responseJson, position, yaw, height)
+Apartment.prototype.repositionGeometry = function(walls, box, position)
 {
-        
-    //console.log("request: %o", request);
-
-    var segments = [];
-    this.scale = responseJson.scale;
-    this.startingPos = responseJson.geometry.startingPosition;
-    this.startingPos[2] = 0;
-    var rectangles = responseJson.geometry.geometry;
-
-    for (var i in rectangles)
-    {
-        rectangles[i].pos[2] += height;
-        segments.push(rectangles[i]);
-
-    }
-    
-    //step 2: shift apartment to relocate its center to (0,0) to give its 'position' a canonical meaning
-    var aabb = getAABB( segments);
+    //step 1: move geometry to correct this.heightOffset;
+    //step 2: shift geometry apartment to relocate its center to (0,0) to give its 'position' a canonical meaning
+    var aabb = getAABB( walls);
+    var aabb = getAABB( box, aabb);
     //var dx = aabb.max_x - aabb.min_x;
     //var dy = aabb.max_y - aabb.min_y;
     var mid_x = (aabb.max_x + aabb.min_x) / 2.0;
     var mid_y = (aabb.max_y + aabb.min_y) / 2.0;
     this.pixelShift = [mid_x, mid_y];
 
-    for (var i in segments)
-    {
-        segments[i].pos[0] -= mid_x;
-        segments[i].pos[1] -= mid_y;
-    }    
+    Apartment.moveBy(walls, -mid_x, -mid_y, this.heightOffset);
+    Apartment.moveBy(box,   -mid_x, -mid_y, this.heightOffset);
+
     this.startingPos[0] -= mid_x;
     this.startingPos[1] -= mid_y;
    
     //step 3: rotate apartment;
     //console.log("apartment yaw is %s", yaw);
+    Apartment.rotateBy(walls, this.yawShift);
+    Apartment.rotateBy(box,   this.yawShift);
+    
+    rotate( this.startingPos, this.yawShift);
+    this.startingPos[1] = - this.startingPos[1];
+    
+    
+    //step 4: move to selected position
+    var earthCircumference = 2 * Math.PI * (6378.1 * 1000);
+    var metersPerDegreeLat = earthCircumference / 360;
+    var metersPerDegreeLng = metersPerDegreeLat * Math.cos( Controller.position.lat / 180 * Math.PI);
+    var dx = (position.lng - Controller.position.lng) * metersPerDegreeLng;
+    var dy = (position.lat - Controller.position.lat) * metersPerDegreeLat;
+
+    //FIXME: why do those signs have to be different?
+    Apartment.moveBy(walls, dx, -dy, 0);
+    Apartment.moveBy(box,   dx, -dy, 0);
+    //console.log("Walls: %o, Box: %o", walls, box);
+    this.worldShift = [dx, dy];
+    //console.log("distance to apartment: dx=%sm, dy=%sm", dx, dy);
+    this.startingPos[0] +=dx;
+    this.startingPos[1] -=dy;
+}
+
+Apartment.rotateBy = function(segments, yaw)
+{
     for (var i in segments)
     {
         rotate( segments[i].pos, yaw);
         rotate( segments[i].width, yaw);
         rotate( segments[i].height, yaw);
     }
-    rotate( this.startingPos, yaw);
-    this.startingPos[1] = - this.startingPos[1];
-    
-    this.yawShift = yaw;
-    
-    //step 4: move to selected position
-    var earthCircumference = 2 * Math.PI * (6378.1 * 1000);
-    var metersPerDegreeLat = earthCircumference / 360;
-    var metersPerDegreeLng = metersPerDegreeLat * Math.cos( Controller.position.lat / 180 * Math.PI);
 
-    var dx = (position.lng - Controller.position.lng) * metersPerDegreeLng;
-    var dy = (position.lat - Controller.position.lat) * metersPerDegreeLat;
+}
 
-    this.worldShift = [dx, dy];
-    //console.log("distance to apartment: dx=%sm, dy=%sm", dx, dy);
+Apartment.moveBy = function(segments, dx, dy, dz)
+{
     for (var i in segments)
     {
-        //FIXME: why do those signs have to be different?
         segments[i].pos[0] += dx;
-        segments[i].pos[1] -= dy;
+        segments[i].pos[1] += dy;
+        segments[i].pos[2] += dz;
     }
-    this.startingPos[0] +=dx;
-    this.startingPos[1] -=dy;
-
-    return segments;
 }
 
 
