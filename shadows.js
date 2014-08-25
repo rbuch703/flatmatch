@@ -50,11 +50,17 @@ var Shadows = {
         
         //gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, colorTexture, 0);
         //gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, depthTexture, 0);
-		gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
 		
-		//if the sun is under the horizon, everything is in the shadow. The cleared depth buffer above causes exactly that
+		//if the sun is under the horizon, everything is in the shadow. The cleared depth buffer causes exactly that
 		if (sunPosition[2] < 0)
+		{
+    		gl.clearDepth(-1.0);
+		    gl.clear( gl.DEPTH_BUFFER_BIT );
+    		gl.clearDepth(1.0);
 		    return;
+	    }
+
+		gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
 		    
 		gl.viewport(0, 0, this.depthTextureSize, this.depthTextureSize);
 
