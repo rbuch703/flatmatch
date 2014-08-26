@@ -30,7 +30,8 @@ Sun.prototype.setMomentInTime = function(day, time)
 }
 
 // source of computation: http://www.pveducation.org/pvcdrom/properties-of-sunlight/suns-position
-Sun.prototype.getAngles = function() {
+Sun.getAngles = function(lat, lng, dayOfYear, timeOfDay)
+{
     var dtGmt = 1; //usually one hour time difference to GMT
 
     // day-of-the-year at which summer time begins. Technically, European summer time starts on the last Sunday in March. But since we do not want the user to have to enter a year, we'll just use the end of March as an approximation
@@ -38,23 +39,23 @@ Sun.prototype.getAngles = function() {
     // day-of-the-yeat at which summer time ends. We use the last of October as an approximation
     var summerTimeEnds = 365 - 31 - 30 - 31;
     
-    if (this.dayOfYear > summerTimeBegins && this.dayOfYear < summerTimeEnds)
+    if (dayOfYear > summerTimeBegins && dayOfYear < summerTimeEnds)
         dtGmt = 2;
 
     var LSTM = 15 * dtGmt; //Local Standard Time Meridian
-    var B = (this.dayOfYear - 81) / 365 * 2 * Math.PI;
+    var B = (dayOfYear - 81) / 365 * 2 * Math.PI;
     
     var EoT = 9.87 * Math.sin(2*B) - 7.53*Math.cos(B) - 1.5*Math.sin(B); //Equation of Time;
     //console.log("EoT: %s", EoT);    
-    var TC = 4 * (this.lng - LSTM) + EoT; // Time Correction Factor
+    var TC = 4 * (lng - LSTM) + EoT; // Time Correction Factor
     
-    var LST = this.time + TC/60; //Local Solar Time
+    var LST = timeOfDay + TC/60; //Local Solar Time
     
     var HRA = (15 * (LST - 12)) / 180 * Math.PI;  // Hour Angle in radiants
     var delta = (23.45 * Math.sin(B)) / 180 * Math.PI; // declination in radiants
     //console.log("Declination: %s", delta/Math.PI*180);
     
-    var phi = this.lat / 180 * Math.PI;           // latitude in radiants
+    var phi = lat / 180 * Math.PI;           // latitude in radiants
     
     var elevation = Math.asin( Math.sin(delta) * Math.sin(phi) + 
                                Math.cos(delta) * Math.cos(phi) * Math.cos(HRA));
@@ -67,14 +68,44 @@ Sun.prototype.getAngles = function() {
     return {"elevation": elevation, "azimuth": azimuth};
 }
 
-Sun.prototype.getPosition = function() {
+Sun.prototype.getAngles = function() {
+    return Sun.getAngles( this.lat, this.lng, this.dayOfYear, this.time );
+}
 
-    var angles = this.getAngles();
+Sun.getPosition = function(azimuth, elevation, radius) {
+
+    if (radius === undefined)
+        radius = SkyDome.RADIUS;
 
     //var RADIUS = 00;  //Skybox radius (on which the sun is pinned)
-    return [ SkyDome.RADIUS * Math.sin(angles.azimuth) * Math.cos(angles.elevation), 
-            -SkyDome.RADIUS * Math.cos(angles.azimuth) * Math.cos(angles.elevation), 
-             SkyDome.RADIUS * Math.sin(angles.elevation)];
+    return [ radius * Math.sin(azimuth) * Math.cos(elevation), 
+            -radius * Math.cos(azimuth) * Math.cos(elevation), 
+             radius * Math.sin(elevation)];
+
+}
+
+Sun.prototype.getPosition = function() {
+    var angles = this.getAngles();
+    return Sun.getPosition(angles.azimuth, angles.elevation, SkyDome.RADIUS - 100);
+}
+
+
+Sun.prototype.buildOrbitGlGeometry = function() {
+    if (this.orbitVertices)
+        gl.deleteBuffer(this.orbitVertices);
+
+    var vertices = [];
+
+    for (var t = 0; t <= 24; t+=0.1)
+    {
+        var angles = Sun.getAngles(this.lat, this.lng, this.dayOfYear, t);
+        var pos = Sun.getPosition( angles.azimuth, angles.elevation, SkyDome.RADIUS - 100);
+        [].push.apply(vertices, pos);
+    }
+
+    this.numOrbitVertices = vertices.length / 3 | 0;
+    //console.log(vertices);
+    this.orbitVertices = glu.createArrayBuffer(vertices);
 
 }
 
@@ -138,6 +169,7 @@ Sun.prototype.buildGlGeometry = function() {
 	this.numVertices = vertices.length / 3;
     this.vertices = glu.createArrayBuffer(vertices);
     //this.texCoords= glu.createArrayBuffer(this.texCoords);
+    this.buildOrbitGlGeometry();
 }
 
 Sun.prototype.render = function(modelViewMatrix, projectionMatrix) {
@@ -150,19 +182,23 @@ Sun.prototype.render = function(modelViewMatrix, projectionMatrix) {
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertices);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
 	gl.vertexAttribPointer(Shaders.flat.locations.vertexPosition, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
     
-    /*if (this.shaderProgram.locations.vertexTexCoords != -1)
-    {
-	    gl.enableVertexAttribArray(this.shaderProgram.locations.vertexTexCoords); //setup texcoord buffer
-	    gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoords);
-	    gl.vertexAttribPointer(this.shaderProgram.locations.vertexTexCoords, 2, gl.FLOAT, false, 0, 0);  //assigns array "texCoords" bound above as the vertex attribute "vertexTexCoords"
-	}*/
-
     var mvpMatrix = mat4.create();
     mat4.mul(mvpMatrix, projectionMatrix, modelViewMatrix);
 	gl.uniformMatrix4fv(Shaders.flat.locations.modelViewProjectionMatrix, false, mvpMatrix);
 	gl.uniform4fv( Shaders.flat.locations.color, [1.0, 1.0, 0.90, 1.0]);
     
 	gl.drawArrays(gl.TRIANGLES, 0, this.numVertices);
+	
+    //render orbit	
+    gl.useProgram(Shaders.flat);   //    Install the program as part of the current rendering state
+	gl.enableVertexAttribArray(Shaders.flat.locations.vertexPosition); // setup vertex coordinate buffer
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.orbitVertices);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
+	gl.vertexAttribPointer(Shaders.flat.locations.vertexPosition, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
+	gl.uniformMatrix4fv(Shaders.flat.locations.modelViewProjectionMatrix, false, mvpMatrix);
+	gl.uniform4fv( Shaders.flat.locations.color, [0.6, 0.2, 0.2, 1.0]);
+    gl.drawArrays(gl.LINES, 0, this.numOrbitVertices);
+	
 }
 
 Sun.RADIUS = 100;
