@@ -129,13 +129,23 @@ var Controller = {
 	updateKeyInteraction: function()
 	{
         var now = new Date().getTime();
-        var dt = now - this.lastKeyEventProcessed;
 
+        //nothing to track anymore --> reset state
+        if (!this.keysStillPressed())
+        {
+            this.lastKeyEventProcessed = null;
+            return;
+        }
+
+        // Nothing tracked yet --> initialize state, but do nothing else.
+        // (there is not yet a 'dt' that we could base computations on)
         if (this.lastKeyEventProcessed === null)
         {
             this.lastKeyEventProcessed = now;
             return;
         }
+
+        var dt = now - this.lastKeyEventProcessed;
 
         this.lastKeyEventProcessed = now;
 
@@ -161,9 +171,6 @@ var Controller = {
 
         this.turn(turnX, turnY);
 
-        if (! this.keysStillPressed() && this.down == null)
-            this.lastKeyEventProcessed = null;
-            
         this.updateHistoryState();
 	},
 	
@@ -217,6 +224,7 @@ var Controller = {
             case 39: delete this.keysDown.right; break;
             case 40: delete this.keysDown.down;  break;
         }
+        this.updateKeyInteraction();
     },
     
     keysStillPressed: function()
