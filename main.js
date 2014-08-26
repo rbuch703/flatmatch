@@ -180,7 +180,7 @@ function init()
     if (!gl)
         return;
    
-    Shaders.init();
+    Shaders.init(errorLog);
 
     var date = new Date(Date.now());
     

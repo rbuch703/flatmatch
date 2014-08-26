@@ -8,12 +8,13 @@ glu.compileShader = function (src_str, type)
     gl.compileShader(shader);           //Compile it
     //    Check for errors
     if(!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        console.log("Couldn't compile the vertex shader: " + gl.getShaderInfoLog(shader) );
+        //console.log("Couldn't compile the shader: " + gl.getShaderInfoLog(shader) );
         //    Clean up
+        var errorMsg = gl.getShaderInfoLog(shader);
         gl.deleteShader(shader);
-        return null;
+        return [false, "Couldn't compile the shader: " + errorMsg];
     }
-    return shader;
+    return [true,shader];
 }
 
 glu.createProgram = function (vShader, fShader)
@@ -34,10 +35,25 @@ glu.createProgram = function (vShader, fShader)
 	return shaderProgram;
 }
 
-glu.createShader = function( vertexShaderCode, fragmentShaderCode, attribLocations, uniformLocations)
+glu.createShader = function( vertexShaderCode, fragmentShaderCode, attribLocations, uniformLocations, errorOutput)
 {
-	var shaderProgram  = glu.createProgram( glu.compileShader( vertexShaderCode, gl.VERTEX_SHADER), 
-	                                        glu.compileShader( fragmentShaderCode, gl.FRAGMENT_SHADER) );
+    var tmp = glu.compileShader( vertexShaderCode, gl.VERTEX_SHADER);
+    if (!tmp[0])
+    {
+        if (errorOutput)
+            errorOutput.textContent = tmp[1];
+        return null;
+    }
+    var vShader = tmp[1];
+    var tmp = glu.compileShader( fragmentShaderCode, gl.FRAGMENT_SHADER);
+    if (!tmp[0])
+    {
+        if (errorOutput)
+            errorOutput.textContent = tmp[1];
+        return null;
+    }
+    var fShader = tmp[1];
+	var shaderProgram  = glu.createProgram( vShader, fShader);
 
 	gl.useProgram(shaderProgram);   //    Install the program as part of the current rendering state
 

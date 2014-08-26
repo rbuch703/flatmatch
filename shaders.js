@@ -2,10 +2,11 @@
 
 var Shaders = {
 
-    init: function() 
+    init: function(errorOutput) 
     {
     
         var req = new XMLHttpRequest();
+        this.errorOutput = errorOutput;
         req.open("GET", "shaders.xml" );
         req.onreadystatechange = function() 
         { 
@@ -50,26 +51,31 @@ var Shaders = {
         this.shadow = glu.createShader(  this.shaderSource["shadowed-shader-vs"], 
                                          this.shaderSource["shadowed-texture-shader-fs"],
                                          ["vertexPosition", "normalIn", "vertexTexCoords"],
-                                         ["modelViewProjectionMatrix", "sunDir", "shadowMatrix", "tex", "shadowTex"]);
+                                         ["modelViewProjectionMatrix", "sunDir", "shadowMatrix", "tex", "shadowTex"],
+                                         this.errorOutput);
 
         this.depth = glu.createShader(  this.shaderSource["depth-shader-vs"],
                                         this.shaderSource["depth-shader-fs"],
                                         ["vertexPosition"],
-                                        ["modelViewProjectionMatrix", "lightPos"]);
+                                        ["modelViewProjectionMatrix", "lightPos"],
+                                        this.errorOutput);
 
         this.building = glu.createShader(this.shaderSource["building-shader-vs"],
                                          this.shaderSource["building-shader-fs"],
                                          ["vertexPosition","vertexTexCoords", "vertexNormal"],
-                                         ["modelViewProjectionMatrix", "tex", "cameraPos"]);
+                                         ["modelViewProjectionMatrix", "tex", "cameraPos"],
+                                         this.errorOutput);
         
         this.flat = glu.createShader( this.shaderSource["flat-shader-vs"],
                                       this.shaderSource["flat-shader-fs"],
-                                      ["vertexPosition"], ["modelViewProjectionMatrix", "color"]);
+                                      ["vertexPosition"], ["modelViewProjectionMatrix", "color"],
+                                      this.errorOutput);
 
         this.textured = glu.createShader( this.shaderSource["texture-shader-vs"], 
                                           this.shaderSource["texture-shader-fs"],
                                           ["vertexPosition","vertexTexCoords"], 
-                                          ["modelViewProjectionMatrix", "tex"]);
+                                          ["modelViewProjectionMatrix", "tex"],
+                                          this.errorOutput);
 
         Shaders.ready = true;
         scheduleFrameRendering();
