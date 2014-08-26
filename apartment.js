@@ -79,13 +79,17 @@ Apartment.prototype.render = function(modelViewMatrix, projectionMatrix, shadowM
 
 
     gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, Shadows.depthTexture);
+    gl.bindTexture(gl.TEXTURE_2D, Shadows.colorTexture);//.depthTexture);
 
     
 	for (var i = 0; i < this.numVertices; i+=6)
 	{
         gl.activeTexture(gl.TEXTURE0);				
-        gl.bindTexture(gl.TEXTURE_2D, this.textures[i/6]);
+        //if (i % 12 != 0)
+            gl.bindTexture(gl.TEXTURE_2D, this.textures[i/6]);
+        //else
+        //    gl.bindTexture(gl.TEXTURE_2D, Shadows.colorTexture);
+            
 	    gl.drawArrays(gl.TRIANGLES, i, 6);
     }
     

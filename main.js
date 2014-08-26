@@ -204,6 +204,9 @@ function init()
         slide: function( event, ui ) { onSunPositionChanged(mapSun.dayOfYear, ui.value); }
         });
 
+    //disallow slider manipulation via keyboard, as keyboard input is alredy used for movement inside the scene
+    $("#slider-day .ui-slider-handle").unbind('keydown');    
+    $("#slider-time .ui-slider-handle").unbind('keydown');    
     
     var req = new XMLHttpRequest();
     req.open("GET", OFFER_REST_BASE_URL + "/get/offer/" + rowId );

@@ -14,10 +14,22 @@
 
 <script id="depth-shader-fs" type="x-shader/x-fragment">
     #line 1 102
-	precision mediump float;
+	precision highp float;
     
 	void main(void) {
-        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);//vec4(vec3(depth), 1.0);
+	    //float w = gl_FragCoord.w;
+	    float z = gl_FragCoord.z;
+	    float z1 = fract(z*255.0);
+	    float z2 = fract(z1*255.0);
+	    float z3 = fract(z2*255.0);
+	    //this biasing is necessary for shadow mapping to work correctly
+	    //source: http://forum.devmaster.net/t/shader-effects-shadow-mapping/3002
+	    // this might be due to the GPU *rounding* the float values to the nearest uint8_t instead of the expeected *truncating*
+	    z  -= 1.0/255.0*z1;
+	    z1 -= 1.0/255.0*z2;
+	    z2 -= 1.0/255.0*z3;
+        gl_FragColor = vec4(z, z1, z2, z3);//vec4(vec3(depth), 1.0);
+        //gl_FragColor = vec4((z-232.0/256.0)*25.0, z1, 0, 1.0);
 	}
 </script>
 
@@ -148,7 +160,12 @@
 	    float depth = shadowNDC.z;
 	    int inLight = 0;
 	    const float delta = 0.5/2048.0;
-	    if (texture2D(shadowTex, vec2(shadowNDC.s,         shadowNDC.t        ) ).r + 0.00002 >= depth) inLight++;
+	    vec4 col = texture2D(shadowTex, vec2(shadowNDC.s,         shadowNDC.t        ) );
+	    float lightDepth = col.r + col.g/255.0 + col.b/(255.0*255.0) + col.a/(255.0*255.0*255.0);
+	    
+	    if (lightDepth + 0.00002 > depth)
+	        inLight++;
+	    //if (texture2D(shadowTex, vec2(shadowNDC.s,         shadowNDC.t        ) ).r + 0.00002 >= depth) inLight++;
 	    /*if (texture2D(shadowTex, vec2(shadowNDC.s,         shadowNDC.t + delta) ).r + 0.00001 >= depth) inLight++;
 	    if (texture2D(shadowTex, vec2(shadowNDC.s + delta, shadowNDC.t        ) ).r + 0.00001 >= depth) inLight++;
 	    if (texture2D(shadowTex, vec2(shadowNDC.s + delta, shadowNDC.t + delta) ).r + 0.00001 >= depth) inLight++;*/
@@ -158,7 +175,11 @@
         if (( sunDiff < 0.00001) || (inLight == 0))
             gl_FragColor = col1;
         else		    
-		    gl_FragColor = vec4(col1.rgb*(1.0 + float(inLight)/2.5 * sunDiff), 1.0);
+        {
+            vec4 col_tmp = vec4(col1.rgb*(1.0 + float(inLight)/2.5 * sunDiff), 1.0);
+            //col_tmp.b = abs( depth - lightDepth);
+		    gl_FragColor = col_tmp;
+	    }
 	}
 ]]>
 </script>
