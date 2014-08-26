@@ -103,10 +103,11 @@ function offerMetadataLoaded(offer)
     //onChangeLocation();
 }    
 
+var daysPerMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
 function getDayString(dayOfYear)
 {
     var day = ((dayOfYear % 366) | 0)+1;
-    var daysPerMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
     var monthNames = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
     
     for (var month = 0; day > daysPerMonth[month]; month++)
@@ -115,10 +116,53 @@ function getDayString(dayOfYear)
     return "" + day + ". " + monthNames[month];
 }
 
+function getDayOfYear(date)
+{
+    var month = date.getMonth();        //Note the JavaScript Date API is 0-based for the getMonth(),
+    var dayOfYear = date.getDate()-1;   //but 1-based for getDate()
+    
+    for (var i = 0; i < month; i++)
+        dayOfYear += daysPerMonth[i];
+
+    //for now, we just ignore leap years altogether        
+    //var year = date.getFullYear();
+    //var isLeapYear =  (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0));
+    
+    //in a leap year, every day after February 28th is one day further from the beginning of that year than normal
+    //if (isLeapYear && dayOfYear > daysPerMonth[0] + daysPerMonth[1])
+    //    dayOfYear += 1;
+        
+    return dayOfYear;
+}
+
 function onSunPositionChanged(day, time)
 {
-    lblDay.textContent = getDayString(day);
     mapSun.setMomentInTime(day, time);
+    
+    var riseTime = mapSun.getSunriseTime();
+    if (riseTime == null) riseTime = 0.0;
+    
+    var setTime = mapSun.getSunsetTime();
+    if (setTime == null) setTime = 24.0;
+    
+    $( "#slider-time" ).slider("option", "min", riseTime);
+    $( "#slider-time" ).slider("option", "max", setTime);
+    
+    lblDay.textContent = getDayString(day);
+    var hour = time | 0;
+    var minute = ""+ ((time - hour)*60).toFixed(0);
+    while (minute.length < 2) 
+        minute = "0" + minute;
+
+   lblTime.textContent =  "" + hour + ":" + minute;
+   
+   if (time == riseTime)
+    lblTime.textContent += " (Sonnenaufgang)";
+    
+   if (time == setTime)
+    lblTime.textContent += " (Sonnenuntergang)";
+
+    
     Shadows.dirty = true;
     scheduleFrameRendering();
 }
@@ -138,22 +182,25 @@ function init()
    
     Shaders.init();
 
+    var date = new Date(Date.now());
+    
+
     
     $( "#slider-day" ).slider({
         min: 0,
         max: 364,
-        value: 200,
+        value: getDayOfYear(date),
         step:1,
-        stop:  function() {onSunPositionChanged( $( "#slider-day" ).slider( "value"), mapSun.time); },
-        slide: function( event, ui ) { onSunPositionChanged(ui.value, mapSun.time); }
+        stop:  function( event, ui ) { onSunPositionChanged( ui.value, mapSun.time); },
+        slide: function( event, ui ) { onSunPositionChanged( ui.value, mapSun.time); }
         });
 
     $( "#slider-time" ).slider({
         min: 0,
         max: 24,
-        value: 10,
-        step:0.1,
-        stop:  function() {onSunPositionChanged(mapSun.dayOfYear, $( "#slider-time" ).slider("value")); },
+        value: date.getHours() + 1/60* date.getMinutes(),
+        step:0.01,
+        stop:  function( event, ui ) { onSunPositionChanged(mapSun.dayOfYear, ui.value); },
         slide: function( event, ui ) { onSunPositionChanged(mapSun.dayOfYear, ui.value); }
         });
 

@@ -11,6 +11,7 @@ function getDayOfYear( date ) {
 function Sun(lat, lng) {
     this.lat = lat;
     this.lng = lng;
+
     this.dayOfYear = 229;
     this.time = 12; //noon;
 
@@ -82,6 +83,65 @@ Sun.getPosition = function(azimuth, elevation, radius) {
             -radius * Math.cos(azimuth) * Math.cos(elevation), 
              radius * Math.sin(elevation)];
 
+}
+
+Sun.getSunriseTime = function(lat, lng, dayOfYear)
+{
+    var hi = 12.0; //noon;
+    var lo = 0.0;  //midnight;
+    
+    // check for polar day/night (sun is always above/below the horizon) where sunrise/sunset have no meaning.
+    // Note that the computation here is not mathematically correct (noon and midnight need not be the points of highest/lowest 
+    // elevation, and thus sun may rise/set even though it has not risen till noon/set till midnight),
+    // but it works for the latitude range we are interested in.
+    if (Sun.getAngles(lat, lng, dayOfYear, hi).elevation < 0 || Sun.getAngles(lat, lng, dayOfYear, lo).elevation > 0)
+            return null; 
+        
+    for (var i = 0; i < 10; i++)
+    {
+        var mid = (hi +lo) / 2.0;
+        if ( Sun.getAngles(lat, lng, dayOfYear, mid).elevation < 0)
+            lo = mid;
+        else
+            hi = mid;
+    }
+    return (hi + lo) / 2.0;
+
+}
+
+Sun.prototype.getSunriseTime = function()
+{
+    return Sun.getSunriseTime(this.lat, this.lng, this.dayOfYear);
+}
+
+
+Sun.getSunsetTime = function(lat, lng, dayOfYear)
+{
+    var lo = 12.0; //noon;
+    var hi = 24.0;  //midnight;
+    // check for polar day/night (sun is always above/below the horizon) where sunrise/sunset have no meaning.
+    // Note that the computation here is not mathematically correct (noon and midnight need not be the points of highest/lowest 
+    // elevation, and thus sun may rise/set even though it has not risen till noon/set till midnight),
+    // but it works for the latitude range we are interested in.
+    if (Sun.getAngles(lat, lng, dayOfYear, hi).elevation > 0 || Sun.getAngles(lat, lng, dayOfYear, lo).elevation < 0)
+        return null;
+        
+    for (var i = 0; i < 10; i++)
+    {
+        var mid = (hi +lo) / 2.0;
+        if ( Sun.getAngles(lat, lng, dayOfYear, mid).elevation < 0)
+            hi = mid;
+        else
+            lo = mid;
+    }
+    return (hi + lo) / 2.0;
+
+}
+
+
+Sun.prototype.getSunsetTime = function()
+{
+    return Sun.getSunsetTime(this.lat, this.lng, this.dayOfYear);
 }
 
 Sun.prototype.getPosition = function() {

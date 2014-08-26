@@ -80,7 +80,7 @@ var Shadows = {
             if (sceneObjects[i])
                 sceneObjects[i].renderDepth(modelViewMatrix, projectionMatrix);
        
-    },
+    }
 
 
 };

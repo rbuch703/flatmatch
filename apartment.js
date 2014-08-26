@@ -96,7 +96,7 @@ Apartment.prototype.render = function(modelViewMatrix, projectionMatrix, shadowM
 	gl.vertexAttribPointer(Shaders.flat.locations.vertexPosition, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
     
 	gl.uniformMatrix4fv(Shaders.flat.locations.modelViewProjectionMatrix, false, mvpMatrix);
-	gl.uniform4fv( Shaders.flat.locations.color, [0.5, 0.5, 0.6, 1.0]);
+	gl.uniform4fv( Shaders.flat.locations.color, [0.5, 0.5, 0.55, 1.0]);
     
 	gl.drawArrays(gl.TRIANGLES, 0, this.numBoxVertices);
 
