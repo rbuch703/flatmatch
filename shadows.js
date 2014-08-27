@@ -7,6 +7,8 @@ var Shadows = {
     
     init: function()
     {
+        if (! glu.performShadowMapping)
+            return;
         this.shadowMvpMatrix = mat4.create();
 
         // Create a color texture for use with the depth shader
@@ -47,6 +49,9 @@ var Shadows = {
     renderDepthTexture: function( sunPosition, lookAtPosition, sceneObjects)
     {
         if (! this.dirty)
+            return;
+
+        if (! glu.performShadowMapping)
             return;
         
         this.dirty = false;

@@ -56,14 +56,6 @@ Apartment.prototype.render = function(modelViewMatrix, projectionMatrix, shadowM
     mat4.mul(mvpMatrix, projectionMatrix, modelViewMatrix);
 	gl.useProgram(Shaders.shadow);   //    Install the program as part of the current rendering state
 	gl.uniformMatrix4fv(Shaders.shadow.locations.modelViewProjectionMatrix, false, mvpMatrix);
-	gl.uniformMatrix4fv(Shaders.shadow.locations.shadowMatrix, false, shadowMvpMatrix);
-
-
-    var sunDir = norm3(mapSun.getPosition());
-	gl.uniform3fv(Shaders.shadow.locations.sunDir, sunDir);
-
-    gl.uniform1i(Shaders.shadow.locations.tex, 0); //select texture unit 0 as the source for the shader variable "tex" 
-    gl.uniform1i(Shaders.shadow.locations.shadowTex, 1); //select texture unit 1 as the source for the shader variable "shadowTex" 
 
 	gl.enableVertexAttribArray(Shaders.shadow.locations.vertexPosition); // setup vertex coordinate buffer
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertices);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
@@ -73,22 +65,32 @@ Apartment.prototype.render = function(modelViewMatrix, projectionMatrix, shadowM
 	gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoords);
 	gl.vertexAttribPointer(Shaders.shadow.locations.vertexTexCoords, 2, gl.FLOAT, false, 0, 0);  //assigns array "texCoords" bound above as the vertex attribute "vertexTexCoords"
 
-	gl.enableVertexAttribArray(Shaders.shadow.locations.normalIn); //setup normal buffer
-	gl.bindBuffer(gl.ARRAY_BUFFER, this.normals);
-	gl.vertexAttribPointer(Shaders.shadow.locations.normalIn, 3, gl.FLOAT, false, 0, 0);  //assigns array "texCoords" bound above as the vertex attribute "vertexTexCoords"
+
+    if (glu.performShadowMapping)
+    {
+	    gl.uniformMatrix4fv(Shaders.shadow.locations.shadowMatrix, false, shadowMvpMatrix);
 
 
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, Shadows.colorTexture);//.depthTexture);
+        var sunDir = norm3(mapSun.getPosition());
+	    gl.uniform3fv(Shaders.shadow.locations.sunDir, sunDir);
 
+        gl.uniform1i(Shaders.shadow.locations.tex, 0); //select texture unit 0 as the source for the shader variable "tex" 
+        gl.uniform1i(Shaders.shadow.locations.shadowTex, 1); //select texture unit 1 as the source for the shader variable "shadowTex" 
+
+
+	    gl.enableVertexAttribArray(Shaders.shadow.locations.normalIn); //setup normal buffer
+	    gl.bindBuffer(gl.ARRAY_BUFFER, this.normals);
+	    gl.vertexAttribPointer(Shaders.shadow.locations.normalIn, 3, gl.FLOAT, false, 0, 0);  //assigns array "texCoords" bound above as the vertex attribute "vertexTexCoords"
+
+
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, Shadows.colorTexture);//.depthTexture);
+    }
     
 	for (var i = 0; i < this.numVertices; i+=6)
 	{
         gl.activeTexture(gl.TEXTURE0);				
-        //if (i % 12 != 0)
             gl.bindTexture(gl.TEXTURE_2D, this.textures[i/6]);
-        //else
-        //    gl.bindTexture(gl.TEXTURE_2D, Shadows.colorTexture);
             
 	    gl.drawArrays(gl.TRIANGLES, i, 6);
     }

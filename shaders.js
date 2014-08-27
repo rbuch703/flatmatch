@@ -48,12 +48,6 @@ var Shaders = {
         }
         
         
-        this.shadow = glu.createShader(  this.shaderSource["shadowed-shader-vs"], 
-                                         this.shaderSource["shadowed-texture-shader-fs"],
-                                         ["vertexPosition", "normalIn", "vertexTexCoords"],
-                                         ["modelViewProjectionMatrix", "sunDir", "shadowMatrix", "tex", "shadowTex"],
-                                         this.errorOutput);
-
         this.depth = glu.createShader(  this.shaderSource["depth-shader-vs"],
                                         this.shaderSource["depth-shader-fs"],
                                         ["vertexPosition"],
@@ -76,6 +70,14 @@ var Shaders = {
                                           ["vertexPosition","vertexTexCoords"], 
                                           ["modelViewProjectionMatrix", "tex"],
                                           this.errorOutput);
+
+        this.shadow = glu.performShadowMapping ? 
+                        glu.createShader(  this.shaderSource["shadowed-shader-vs"], 
+                                         this.shaderSource["shadowed-texture-shader-fs"],
+                                         ["vertexPosition", "normalIn", "vertexTexCoords"],
+                                         ["modelViewProjectionMatrix", "sunDir", "shadowMatrix", "tex", "shadowTex"],
+                                         this.errorOutput) : this.textured;
+
 
         Shaders.ready = true;
         scheduleFrameRendering();

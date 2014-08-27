@@ -106,7 +106,12 @@ glu.init = function()
 
     glu.depthTextureExtension = gl.getExtension("WEBGL_depth_texture");
 
-
+    /* Note: we do not actually need WEBGL_depth_texture for shadow mapping, as the current implementation 
+     *       simulates depth textures by encoding depth information in RGBA channels. Rather, we use the 
+     *       presence of WEBGL_depth_texture as a hint that the GPU is powerful enough to:
+     *       1. support a shader precision high enough for shadow mapping
+     *       2. render shadow-mapped geometry in real-time.*/
+    glu.performShadowMapping = glu.depthTextureExtension ? true : false;
 }
 
 glu.setMaxAnisotropy = function()
