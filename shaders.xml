@@ -1,8 +1,5 @@
-<!DOCTYPE html> 
-
 <shaders>
 <script id="depth-shader-vs" type="x-shader/x-vertex">
-    #line 1 101
 	precision mediump float;
     uniform mat4 modelViewProjectionMatrix;
 	attribute vec3 vertexPosition;
@@ -13,7 +10,6 @@
 </script>
 
 <script id="depth-shader-fs" type="x-shader/x-fragment">
-    #line 1 102
 	precision highp float;
     
 	void main(void) {
@@ -36,7 +32,6 @@
 
 <script id="building-shader-fs" type="x-shader/x-fragment">
 <![CDATA[
-    #line 1 105
 	precision mediump float;
     varying vec3 texCoordV;
     varying vec3 normal;
@@ -48,11 +43,6 @@
 	    const float c = 0.02;
 
         vec3 vView = normalize( cameraPos - worldPosition); //direction vector from surface to camera (camera is always at (0,0,0) )
-        if (gl_FragCoord.z < 0.95)
-        {
-            discard;
-            return;
-        }
         float diffuse = abs( 0.5 * dot(vView, normal) );
 
         //gl_FragColor = vec4( (normal + 1.0)/2.0, 1.0);
@@ -68,7 +58,6 @@
 <!-- As of version 11, Internet Explorer apparently does not support the "discard" keyword (error WEBGL11102),
      So we have to provide a shader version without it-->
 <script id="building-shader-fs-ie" type="x-shader/x-fragment">
-    #line 1 106
 	precision mediump float;
     varying vec3 texCoordV;
     varying vec3 normal;
@@ -92,18 +81,18 @@
 </script>
 
 <script id="texture-shader-fs" type="x-shader/x-fragment">
-    #line 1 103
+<![CDATA[
     precision mediump float;
     varying vec2 texCoordV;
     uniform sampler2D tex;
 	void main(void) {
         gl_FragColor = texture2D(tex, texCoordV.st);
 	}
+]]>
 </script>
 
 
-<script id="texture-shader-vs" type="x-shader/x-vertex">
-    #line 1 107
+<script id="texture-shader-vs" type="x-shader/x-vertex"><![CDATA[
 	attribute vec3 vertexPosition;
     attribute vec2 vertexTexCoords;  			
 	
@@ -115,10 +104,10 @@
 		gl_Position = modelViewProjectionMatrix * vec4(vertexPosition, 1.0);
 		texCoordV = vertexTexCoords;
 	}
+]]>
 </script>
 
 <script id="shadowed-shader-vs" type="x-shader/x-vertex">
-    #line 1 108
 	attribute vec3 vertexPosition;
     attribute vec2 vertexTexCoords;  			
     attribute vec3 normalIn;
@@ -140,7 +129,6 @@
 
 <script id="shadowed-texture-shader-fs" type="x-shader/x-fragment">
 <![CDATA[
-    #line 1 109
 	precision mediump float;
 	
 	
@@ -186,7 +174,6 @@
 
 
 <script id="building-shader-vs" type="x-shader/x-vertex">
-    #line 1 110
 	attribute vec3 vertexPosition;
     attribute vec3 vertexTexCoords; 			
     attribute vec3 vertexNormal;
@@ -206,7 +193,6 @@
 </script>
 
 <script id="flat-shader-vs" type="x-shader/x-vertex">
-    #line 1 111
 	attribute vec3 vertexPosition;
 	
 	uniform mat4 modelViewProjectionMatrix;
@@ -217,7 +203,6 @@
 </script>
 
 <script id="flat-shader-fs" type="x-shader/x-fragment">
-    #line 1 112
 	precision mediump float;
     
     uniform vec4 color;

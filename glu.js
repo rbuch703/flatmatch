@@ -12,7 +12,7 @@ glu.compileShader = function (src_str, type)
         //    Clean up
         var errorMsg = gl.getShaderInfoLog(shader);
         gl.deleteShader(shader);
-        return [false, "Couldn't compile the shader: " + errorMsg];
+        return [false, "Couldn't compile the shader: " + errorMsg + "\nSource is: " + src_str];
     }
     return [true,shader];
 }
@@ -25,14 +25,14 @@ glu.createProgram = function (vShader, fShader)
 	gl.attachShader(shaderProgram, fShader); 
 	gl.linkProgram(shaderProgram);           
 	if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
-		alert("Unable to initialise shaders");
+		var errorMsg = gl.getProgramInfoLog(shaderProgram);
 		//    Clean up
 		gl.deleteProgram(shaderProgram);
-		gl.deleteProgram(vertexShader);
-		gl.deleteProgram(fragmentShader);
-		return null;
+		gl.deleteShader(vShader);
+		gl.deleteShader(fShader);
+		return [false, errorMsg];
 	}			   
-	return shaderProgram;
+	return [true, shaderProgram];
 }
 
 glu.createShader = function( vertexShaderCode, fragmentShaderCode, attribLocations, uniformLocations, errorOutput)
@@ -53,7 +53,16 @@ glu.createShader = function( vertexShaderCode, fragmentShaderCode, attribLocatio
         return null;
     }
     var fShader = tmp[1];
-	var shaderProgram  = glu.createProgram( vShader, fShader);
+    
+	var tmp  = glu.createProgram( vShader, fShader);
+	if (!tmp[0])
+    {
+        if (errorOutput)
+            errorOutput.textContent = tmp[1] + "; vShader was:" + vertexShaderCode + "; fShader was: " + fragmentShaderCode;
+        
+        return null;
+    }
+    var shaderProgram = tmp[1];
 
 	gl.useProgram(shaderProgram);   //    Install the program as part of the current rendering state
 
@@ -111,7 +120,7 @@ glu.init = function()
      *       presence of WEBGL_depth_texture as a hint that the GPU is powerful enough to:
      *       1. support a shader precision high enough for shadow mapping
      *       2. render shadow-mapped geometry in real-time.*/
-    glu.performShadowMapping = glu.depthTextureExtension ? true : false;
+    glu.performShadowMapping = false;//glu.depthTextureExtension ? true : false;
 }
 
 glu.setMaxAnisotropy = function()

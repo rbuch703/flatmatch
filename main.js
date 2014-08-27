@@ -176,6 +176,9 @@ function getDayOfYear(date)
 
 function onSunPositionChanged(day, time)
 {
+    if (!mapSun)
+        return;
+        
     mapSun.setMomentInTime(day, time);
     
     var riseTime = mapSun.getSunriseTime();
@@ -246,7 +249,7 @@ function init()
     jQuery("#slider-time .ui-slider-handle").unbind('keydown');    
     
     if (!glu.performShadowMapping)
-        aSunPos.style = "display:none";
+        aSunPos.style.display = "none";
     
     var req = new XMLHttpRequest();
     req.open("GET", OFFER_REST_BASE_URL + "/get/offer/" + rowId );
