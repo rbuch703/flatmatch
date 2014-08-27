@@ -46,9 +46,10 @@ var Shaders = {
             
             Shaders.shaderSource[id] = shaderSrc;
         }
-        
-        
-        Shaders.depth = glu.createShader(Shaders.shaderSource["depth-shader-vs"],
+    
+        //don't need the depth shader otherwise
+        if (glu.performShadowMapping)
+            Shaders.depth = glu.createShader(Shaders.shaderSource["depth-shader-vs"],
                                          Shaders.shaderSource["depth-shader-fs"],
                                          ["vertexPosition"],
                                          ["modelViewProjectionMatrix", "lightPos"],

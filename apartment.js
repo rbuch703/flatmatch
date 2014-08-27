@@ -211,10 +211,11 @@ Apartment.getTrianglesVertices = function(seg)
      * of pixel-sized holes between individual triangles caused by numerical inaccuracy.
      * Note that while these computations are done in JavaScript's 'Number' type (i.e. IEEE-754 double),
      *  the geometry is uploaded to OpenGl as IEEE-754 float, so the computation has to account for 'float' accuracy.
+     * (or even half-float on mobile devices)
      */
-    var w = [seg.width[0]*1.0001, seg.width[1] * 1.0001, seg.width[2]*1.0001];
+    var w = [seg.width[0]*1.001, seg.width[1] * 1.001, seg.width[2]*1.001];
     var B = [A[0]+w[0], A[1]+w[1], A[2]+w[2]];
-    var h = [seg.height[0]*1.0001, seg.height[1] * 1.0001, seg.height[2]*1.0001];
+    var h = [seg.height[0]*1.001, seg.height[1] * 1.001, seg.height[2]*1.001];
     var C = [B[0]+h[0], B[1]+h[1], B[2]+h[2]];
     var D = [A[0]+h[0], A[1]+h[1], A[2]+h[2]];
 
