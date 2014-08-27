@@ -1,5 +1,8 @@
 "use strict"
 
+/**
+ * @constructor
+ */
 function Apartment(id, position, yaw, height) {
 
     this.yawShift = yaw;

@@ -7,7 +7,9 @@ function getDayOfYear( date ) {
 }
 
 
-
+/**
+ * @constructor
+ */
 function Sun(lat, lng) {
     this.lat = lat;
     this.lng = lng;

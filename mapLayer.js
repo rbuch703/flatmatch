@@ -1,5 +1,8 @@
 "use strict"
 
+/**
+ * @constructor
+ */
 function MapLayer(gl, position) {
     
     this.createTileHierarchy(  );

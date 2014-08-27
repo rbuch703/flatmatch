@@ -6,16 +6,16 @@ var Shaders = {
     {
     
         var req = new XMLHttpRequest();
-        this.errorOutput = errorOutput;
+        Shaders.errorOutput = errorOutput;
         req.open("GET", "shaders.xml" );
         req.onreadystatechange = function() 
         { 
-            if (this.readyState != 4 || this.response == null)
+            if (req.readyState != 4 || req.response == null)
                 return;
 
             //manual parsing is not the most direct approach, but more cross-browser compatible
             var parser = new DOMParser();
-            Shaders.onShadersRetrieved(parser.parseFromString(this.responseText, "application/xml"));
+            Shaders.onShadersRetrieved(parser.parseFromString(req.responseText, "application/xml"));
         }
         req.send();
 
@@ -25,7 +25,7 @@ var Shaders = {
     {
         var scripts = dom.getElementsByTagName("script");
         //console.log("%o", scripts);
-        this.shaderSource = {};
+        Shaders.shaderSource = {};
         for (var i = 0; i < scripts.length; i++)
         {
             var type = scripts[i].attributes["type"].value;
@@ -44,39 +44,39 @@ var Shaders = {
                 continue;
             }
             
-            this.shaderSource[id] = shaderSrc;
+            Shaders.shaderSource[id] = shaderSrc;
         }
         
         
-        this.depth = glu.createShader(  this.shaderSource["depth-shader-vs"],
-                                        this.shaderSource["depth-shader-fs"],
-                                        ["vertexPosition"],
-                                        ["modelViewProjectionMatrix", "lightPos"],
-                                        this.errorOutput);
+        Shaders.depth = glu.createShader(Shaders.shaderSource["depth-shader-vs"],
+                                         Shaders.shaderSource["depth-shader-fs"],
+                                         ["vertexPosition"],
+                                         ["modelViewProjectionMatrix", "lightPos"],
+                                         Shaders.errorOutput);
 
-        this.building = glu.createShader(this.shaderSource["building-shader-vs"],
-                                         this.shaderSource["building-shader-fs"],
-                                         ["vertexPosition","vertexTexCoords", "vertexNormal"],
-                                         ["modelViewProjectionMatrix", "tex", "cameraPos"],
-                                         this.errorOutput);
+        Shaders.building = glu.createShader( Shaders.shaderSource["building-shader-vs"],
+                                             Shaders.shaderSource["building-shader-fs"],
+                                             ["vertexPosition","vertexTexCoords", "vertexNormal"],
+                                             ["modelViewProjectionMatrix", "tex", "cameraPos"],
+                                             Shaders.errorOutput);
         
-        this.flat = glu.createShader( this.shaderSource["flat-shader-vs"],
-                                      this.shaderSource["flat-shader-fs"],
-                                      ["vertexPosition"], ["modelViewProjectionMatrix", "color"],
-                                      this.errorOutput);
+        Shaders.flat = glu.createShader( Shaders.shaderSource["flat-shader-vs"],
+                                         Shaders.shaderSource["flat-shader-fs"],
+                                         ["vertexPosition"], ["modelViewProjectionMatrix", "color"],
+                                         Shaders.errorOutput);
 
-        this.textured = glu.createShader( this.shaderSource["texture-shader-vs"], 
-                                          this.shaderSource["texture-shader-fs"],
+        Shaders.textured = glu.createShader( Shaders.shaderSource["texture-shader-vs"], 
+                                          Shaders.shaderSource["texture-shader-fs"],
                                           ["vertexPosition","vertexTexCoords"], 
                                           ["modelViewProjectionMatrix", "tex"],
-                                          this.errorOutput);
+                                          Shaders.errorOutput);
 
-        this.shadow = glu.performShadowMapping ? 
-                        glu.createShader(  this.shaderSource["shadowed-shader-vs"], 
-                                         this.shaderSource["shadowed-texture-shader-fs"],
+        Shaders.shadow = glu.performShadowMapping ? 
+                        glu.createShader(  Shaders.shaderSource["shadowed-shader-vs"], 
+                                         Shaders.shaderSource["shadowed-texture-shader-fs"],
                                          ["vertexPosition", "normalIn", "vertexTexCoords"],
                                          ["modelViewProjectionMatrix", "sunDir", "shadowMatrix", "tex", "shadowTex"],
-                                         this.errorOutput) : this.textured;
+                                         Shaders.errorOutput) : Shaders.textured;
 
 
         Shaders.ready = true;

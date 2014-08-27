@@ -1,8 +1,11 @@
 "use strict"
+
+/**
+ * @constructor
+ */
 function SkyDome()
 {
 
-    
     this.buildGlGeometry();
 }    
 

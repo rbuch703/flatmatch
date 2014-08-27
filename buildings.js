@@ -1,9 +1,11 @@
 "use strict"
 
+/**
+ * @constructor
+ */
 function Buildings(gl, position)
 {
 
-    this.gl = gl;
     if (!gl)
         return;
     this.mapCenter = position;//{lat:52.13850380245244, lng:11.64003610610962};
@@ -708,9 +710,6 @@ Buildings.prototype.render = function(modelViewMatrix, projectionMatrix) {
     if (! this.numVertices || !Shaders.ready)
         return;
         
-    var gl = this.gl;
-
-
     //draw faces
 	gl.useProgram(Shaders.building);   //    Install the program as part of the current rendering state
 	gl.enableVertexAttribArray(Shaders.building.locations.vertexPosition); // setup vertex coordinate buffer

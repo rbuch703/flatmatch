@@ -20,40 +20,40 @@ var Controller = {
     {
         var earthCircumference = 2 * Math.PI * (6378.1 * 1000);
         var metersPerDegreeLat = earthCircumference / 360;
-        var metersPerDegreeLng = metersPerDegreeLat * Math.cos( this.position.lat / 180 * Math.PI);
+        var metersPerDegreeLng = metersPerDegreeLat * Math.cos( Controller.position.lat / 180 * Math.PI);
 
-        return {lat: this.position.lat + this.localPosition.y / metersPerDegreeLat,
-                lng: this.position.lng + this.localPosition.x / metersPerDegreeLng};
+        return {lat: Controller.position.lat + Controller.localPosition.y / metersPerDegreeLat,
+                lng: Controller.position.lng + Controller.localPosition.x / metersPerDegreeLng};
     },
     
     getLocalPosition: function()
     {
-        return [this.localPosition.x, this.localPosition.y, this.localPosition.z];
+        return [Controller.localPosition.x, Controller.localPosition.y, Controller.localPosition.z];
     },
 
     buildQueryString: function(lat, lng)
     {
         var lat, lng;
-        if (!lat) lat = this.position.lat;
-        if (!lng) lng = this.position.lng;
+        if (!lat) lat = Controller.position.lat;
+        if (!lng) lng = Controller.position.lng;
         
         return "?lat=" + lat.toFixed(8) +
                "&lng=" + lng.toFixed(8) +
-               "&yaw="+this.viewAngleYaw.toFixed(1)+
-               "&pitch="+this.viewAnglePitch.toFixed(1);
+               "&yaw="+Controller.viewAngleYaw.toFixed(1)+
+               "&pitch="+Controller.viewAnglePitch.toFixed(1);
     },
 
     initFromQueryString: function(queryString)
     {
-        var query = this.toDictionary(queryString);
+        var query = Controller.toDictionary(queryString);
         if (query.lat && query.lng)
         {
-            this.position = {lat:query.lat, lng:query.lng};
+            Controller.position = {lat:query.lat, lng:query.lng};
             
             if ( ("yaw" in  query) && ("pitch" in query) ) //if look direction is also given
             {
-                this.viewAngleYaw = query.yaw;
-                this.viewAnglePitch=query.pitch;
+                Controller.viewAngleYaw = query.yaw;
+                Controller.viewAnglePitch=query.pitch;
             }
         }
     },
@@ -80,16 +80,16 @@ var Controller = {
 	    if (e.button != 0) 
 	        return;
 
-	    this.x = e.clientX;
-	    this.y = e.clientY;
-	    this.down = "mouse";
+	    Controller.x = e.clientX;
+	    Controller.y = e.clientY;
+	    Controller.down = "mouse";
 	},
 	
 	onMouseUp: function(e)
 	{
 	    if (e.button != 0) 
 	        return;
-	    this.down = null;
+	    Controller.down = null;
 	},
 	
 	keysDown: {},
@@ -98,31 +98,31 @@ var Controller = {
 
     turn: function(yaw, pitch)
     {
-        this.viewAngleYaw = this.viewAngleYaw % 360;
+        Controller.viewAngleYaw = Controller.viewAngleYaw % 360;
         
-        this.viewAngleYaw += yaw;
-        this.viewAnglePitch += pitch;
+        Controller.viewAngleYaw += yaw;
+        Controller.viewAnglePitch += pitch;
         
-        if (this.viewAnglePitch > 60)
-            this.viewAnglePitch = 60;
-        if (this.viewAnglePitch < -60)
-            this.viewAnglePitch = -60;
+        if (Controller.viewAnglePitch > 60)
+            Controller.viewAnglePitch = 60;
+        if (Controller.viewAnglePitch < -60)
+            Controller.viewAnglePitch = -60;
     },
     
     move: function(dx, dy)
     {
-        var arc = this.viewAngleYaw / 180 * Math.PI;
+        var arc = Controller.viewAngleYaw / 180 * Math.PI;
         var forwardX = Math.sin(arc);
         var forwardY = Math.cos(arc);
 
         var rightX = Math.sin(arc + Math.PI/2.0);
         var rightY = Math.cos(arc + Math.PI/2.0);
         
-        this.localPosition.x += dx*rightX;
-        this.localPosition.y += dx*rightY;
+        Controller.localPosition.x += dx*rightX;
+        Controller.localPosition.y += dx*rightY;
         
-        this.localPosition.x += dy*forwardX;
-        this.localPosition.y += dy*forwardY;
+        Controller.localPosition.x += dy*forwardX;
+        Controller.localPosition.y += dy*forwardY;
    
     },
 	
@@ -131,23 +131,23 @@ var Controller = {
         var now = new Date().getTime();
 
         //nothing to track anymore --> reset state
-        if (!this.keysStillPressed())
+        if (!Controller.keysStillPressed())
         {
-            this.lastKeyEventProcessed = null;
+            Controller.lastKeyEventProcessed = null;
             return;
         }
 
         // Nothing tracked yet --> initialize state, but do nothing else.
         // (there is not yet a 'dt' that we could base computations on)
-        if (this.lastKeyEventProcessed === null)
+        if (Controller.lastKeyEventProcessed === null)
         {
-            this.lastKeyEventProcessed = now;
+            Controller.lastKeyEventProcessed = now;
             return;
         }
 
-        var dt = now - this.lastKeyEventProcessed;
+        var dt = now - Controller.lastKeyEventProcessed;
 
-        this.lastKeyEventProcessed = now;
+        Controller.lastKeyEventProcessed = now;
 
         if (dt > 1000)
         {
@@ -155,23 +155,23 @@ var Controller = {
             dt = 1000;
         }
 
-        var dy = dt/400 * getSign(("W" in this.keysDown) || ("up" in this.keysDown), 
-                                  ("S" in this.keysDown) || ("down" in this.keysDown));
+        var dy = dt/400 * getSign(("W" in Controller.keysDown) || ("up" in Controller.keysDown), 
+                                  ("S" in Controller.keysDown) || ("down" in Controller.keysDown));
                                   
-        var dx = dt/400 * getSign( "D" in this.keysDown, "A" in this.keysDown);
+        var dx = dt/400 * getSign( "D" in Controller.keysDown, "A" in Controller.keysDown);
 
-        this.move(dx, dy);
+        Controller.move(dx, dy);
 
         
-        var turnX = dt/10 * getSign( "right" in this.keysDown, "left" in this.keysDown );
+        var turnX = dt/10 * getSign( "right" in Controller.keysDown, "left" in Controller.keysDown );
 
         var turnY = 0;
-        if (this.keysStillPressed() && this.down != "mouse" && Math.abs(this.viewAnglePitch) > 1)
-            turnY = (this.viewAnglePitch < 0 ? 1 : -1) * dt/40;
+        if (Controller.keysStillPressed() && Controller.down != "mouse" && Math.abs(Controller.viewAnglePitch) > 1)
+            turnY = (Controller.viewAnglePitch < 0 ? 1 : -1) * dt/40;
 
-        this.turn(turnX, turnY);
+        Controller.turn(turnX, turnY);
 
-        this.updateHistoryState();
+        Controller.updateHistoryState();
 	},
 	
 	x:null,
@@ -196,17 +196,17 @@ var Controller = {
 
         }
         
-        if (key in this.keysDown) //is just a reoccuring event for a key that is still pressed
+        if (key in Controller.keysDown) //is just a reoccuring event for a key that is still pressed
             return;
 
         if (key != null)
         {            
-            this.updateKeyInteraction();
-            this.keysDown[key] = key;
+            Controller.updateKeyInteraction();
+            Controller.keysDown[key] = key;
         }
         
-        if (this.onRequestFrameRender)
-            this.onRequestFrameRender();
+        if (Controller.onRequestFrameRender)
+            Controller.onRequestFrameRender();
 
     },
 
@@ -215,38 +215,38 @@ var Controller = {
         switch (evt.keyCode)
         {
             
-            case 65: delete this.keysDown.A;     break;
-            case 68: delete this.keysDown.D;     break;
-            case 83: delete this.keysDown.S;     break;
-            case 87: delete this.keysDown.W;     break;
-            case 37: delete this.keysDown.left;  break;
-            case 38: delete this.keysDown.up;    break;
-            case 39: delete this.keysDown.right; break;
-            case 40: delete this.keysDown.down;  break;
+            case 65: delete Controller.keysDown.A;     break;
+            case 68: delete Controller.keysDown.D;     break;
+            case 83: delete Controller.keysDown.S;     break;
+            case 87: delete Controller.keysDown.W;     break;
+            case 37: delete Controller.keysDown.left;  break;
+            case 38: delete Controller.keysDown.up;    break;
+            case 39: delete Controller.keysDown.right; break;
+            case 40: delete Controller.keysDown.down;  break;
         }
-        this.updateKeyInteraction();
+        Controller.updateKeyInteraction();
     },
     
     keysStillPressed: function()
     {
-        return Object.keys(this.keysDown).length > 0;
+        return Object.keys(Controller.keysDown).length > 0;
     },
 	
     onMouseMove: function(e)
 	{
 	    //e.preventDefault();
-        if (this.down != "mouse" ) return;
-        var dx = e.clientX - this.x;
-        var dy = e.clientY - this.y;
+        if (Controller.down != "mouse" ) return;
+        var dx = e.clientX - Controller.x;
+        var dy = e.clientY - Controller.y;
 
-        this.x = e.clientX;
-        this.y = e.clientY;
+        Controller.x = e.clientX;
+        Controller.y = e.clientY;
 
-        this.turn(dx / 5.0, - dy / 5.0);
+        Controller.turn(dx / 5.0, - dy / 5.0);
         
-        this.updateHistoryState();
-        if (this.onRequestFrameRender)
-            this.onRequestFrameRender();
+        Controller.updateHistoryState();
+        if (Controller.onRequestFrameRender)
+            Controller.onRequestFrameRender();
 
 	},
 
@@ -266,18 +266,18 @@ var Controller = {
     {
         ev.preventDefault();
         var touch = ev.changedTouches[0];
-        this.down = touch.identifier;
-        this.x = touch.clientX;
-        this.y = touch.clientY;
+        Controller.down = touch.identifier;
+        Controller.x = touch.clientX;
+        Controller.y = touch.clientY;
     },
     
     onTouchEnd: function(ev)
     {
     
         ev.preventDefault();
-        if (this.getTouchData(ev.changedTouches, this.down))
+        if (Controller.getTouchData(ev.changedTouches, Controller.down))
         {
-            this.down = null;
+            Controller.down = null;
         }
     },
 
@@ -285,21 +285,21 @@ var Controller = {
     {
     
         ev.preventDefault();
-        var touch = this.getTouchData(ev.changedTouches, this.down);
+        var touch = Controller.getTouchData(ev.changedTouches, Controller.down);
         if (!touch)
             return;
             
-        var dx = touch.clientX - this.x;
-        var dy = touch.clientY - this.y;
+        var dx = touch.clientX - Controller.x;
+        var dy = touch.clientY - Controller.y;
 
-        this.x = touch.clientX;
-        this.y = touch.clientY;
-        this.move(0,        -dy / 100.0);
-        this.turn(dx / 5.0, 0       );
+        Controller.x = touch.clientX;
+        Controller.y = touch.clientY;
+        Controller.move(0,        -dy / 100.0);
+        Controller.turn(dx / 5.0, 0       );
 
-        this.updateHistoryState();
-        if (this.onRequestFrameRender)
-            this.onRequestFrameRender();
+        Controller.updateHistoryState();
+        if (Controller.onRequestFrameRender)
+            Controller.onRequestFrameRender();
     },
     
    
@@ -310,10 +310,10 @@ var Controller = {
     // a performance penalty at least in Firefox).
     updateHistoryState : function()
     {
-        if (this.updateTimeoutId)
-            window.clearTimeout(this.updateTimeoutId);
+        if (Controller.updateTimeoutId)
+            window.clearTimeout(Controller.updateTimeoutId);
         
-        this.updateTimeoutId = window.setTimeout( function() 
+        Controller.updateTimeoutId = window.setTimeout( function() 
             {
                 /*
                 var url = document.URL;

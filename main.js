@@ -223,9 +223,7 @@ function init()
 
     var date = new Date(Date.now());
     
-
-    
-    $( "#slider-day" ).slider({
+    jQuery( "#slider-day" ).slider({
         min: 0,
         max: 364,
         value: getDayOfYear(date),
@@ -234,7 +232,7 @@ function init()
         slide: function( event, ui ) { onSunPositionChanged( ui.value, mapSun.time); }
         });
 
-    $( "#slider-time" ).slider({
+    jQuery( "#slider-time" ).slider({
         min: 0,
         max: 24,
         value: date.getHours() + 1/60* date.getMinutes(),
@@ -244,8 +242,8 @@ function init()
         });
 
     //disallow slider manipulation via keyboard, as keyboard input is alredy used for movement inside the scene
-    $("#slider-day .ui-slider-handle").unbind('keydown');    
-    $("#slider-time .ui-slider-handle").unbind('keydown');    
+    jQuery("#slider-day .ui-slider-handle").unbind('keydown');    
+    jQuery("#slider-time .ui-slider-handle").unbind('keydown');    
     
     if (!glu.performShadowMapping)
         aSunPos.style = "display:none";
@@ -255,10 +253,10 @@ function init()
     req.responseType = "";
     req.onreadystatechange = function() 
     { 
-        if (this.readyState != 4 || this.response == null)
+        if (req.readyState != 4 || req.response == null)
             return;
 
-        offerMetadataLoaded( JSON.parse(this.response) );
+        offerMetadataLoaded( JSON.parse(req.response) );
     }
     req.send();
 

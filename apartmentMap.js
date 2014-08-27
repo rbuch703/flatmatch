@@ -6,14 +6,14 @@ var ApartmentMap = {
 
     init: function(canvas, layoutId) 
     {
-        this.canvas = canvas;
+        ApartmentMap.canvas = canvas;
         
-        this.layoutImage = new Image();
-        this.layoutImage.onload = function() {ApartmentMap.resize(); scheduleFrameRendering();};
-        this.layoutImage.src = OFFER_REST_BASE_URL + "/get/layout/"+ layoutId;
+        ApartmentMap.layoutImage = new Image();
+        ApartmentMap.layoutImage.onload = function() {ApartmentMap.resize(); scheduleFrameRendering();};
+        ApartmentMap.layoutImage.src = OFFER_REST_BASE_URL + "/get/layout/"+ layoutId;
         
         
-        this.canvas.addEventListener("click", function(ev) {
+        ApartmentMap.canvas.addEventListener("click", function(ev) {
 	        var canvasScale = Math.min( ApartmentMap.canvas.width  / ApartmentMap.layoutImage.width, 
 	                                    ApartmentMap.canvas.height / ApartmentMap.layoutImage.height);
 
@@ -28,25 +28,25 @@ var ApartmentMap = {
     
 	render: function( layoutPixelPosition)
 	{
-	    if (!this.layoutImage)
+	    if (!ApartmentMap.layoutImage)
 	        return;
 
-	    if (!this.canvas.context2d)
-	        this.canvas.context2d = this.canvas.getContext("2d");
+	    if (!ApartmentMap.canvas.context2d)
+	        ApartmentMap.canvas.context2d = ApartmentMap.canvas.getContext("2d");
 
-        var ctx = this.canvas.context2d;
-        ctx.clearRect ( 0 , 0 , this.canvas.width , this.canvas.height );
-	    var canvasScale = Math.min( this.canvas.width  / this.layoutImage.width, 
-	                                this.canvas.height / this.layoutImage.height);
+        var ctx = ApartmentMap.canvas.context2d;
+        ctx.clearRect ( 0 , 0 , ApartmentMap.canvas.width , ApartmentMap.canvas.height );
+	    var canvasScale = Math.min( ApartmentMap.canvas.width  / ApartmentMap.layoutImage.width, 
+	                                ApartmentMap.canvas.height / ApartmentMap.layoutImage.height);
 	    ctx.globalAlpha = 0.5;
-	    ctx.drawImage(this.layoutImage, 0, 0, this.layoutImage.width * canvasScale, this.layoutImage.height * canvasScale);
+	    ctx.drawImage(ApartmentMap.layoutImage, 0, 0, ApartmentMap.layoutImage.width * canvasScale, ApartmentMap.layoutImage.height * canvasScale);
 	    ctx.globalAlpha = 1.0;
 	    
 	    var pos = layoutPixelPosition;
 
 	    pos[0] *= canvasScale;
 	    pos[1] *= canvasScale;
-        var RADIUS = this.canvas.width / 60;
+        var RADIUS = ApartmentMap.canvas.width / 60;
 
         ctx.lineWidth = 2;
         ctx.strokeStyle = "#44D";
@@ -67,13 +67,13 @@ var ApartmentMap = {
 
     resize: function()
     {
-        if (!this.layoutImage)
+        if (!ApartmentMap.layoutImage)
             return;
 
-        var aspect = this.layoutImage.width / this.layoutImage.height;
-        this.canvas.style.height = this.canvas.clientWidth / aspect + "px";
-        this.canvas.height = this.canvas.clientHeight;
-        this.canvas.width  = this.canvas.clientWidth;
+        var aspect = ApartmentMap.layoutImage.width / ApartmentMap.layoutImage.height;
+        ApartmentMap.canvas.style.height = ApartmentMap.canvas.clientWidth / aspect + "px";
+        ApartmentMap.canvas.height = ApartmentMap.canvas.clientHeight;
+        ApartmentMap.canvas.width  = ApartmentMap.canvas.clientWidth;
     }
     
 }

@@ -5,41 +5,41 @@ var VicinityMap = {
     init: function(div, lat, lng)
     {
         //console.log(lat, lng);
-        this.map = L.map(div, {keyboard:false} ).setView([lat, lng], 18);
-        this.map.on("click", this.onMapClick);
-        this.map.on("zoomend", this.renderFrustum);
+        VicinityMap.map = L.map(div, {keyboard:false} ).setView([lat, lng], 18);
+        VicinityMap.map.on("click", VicinityMap.onMapClick);
+        VicinityMap.map.on("zoomend", VicinityMap.renderFrustum);
 
         L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: 'OpenStreetMap',
             maxZoom: 19, minZoom:0
-        }).addTo(this.map);
+        }).addTo(VicinityMap.map);
 
-        L.control.scale({imperial:false, position:"topright"}).addTo(this.map);
+        L.control.scale({imperial:false, position:"topright"}).addTo(VicinityMap.map);
     },
 
     updatePositionMarker: function(newPos)
     {
-        if (!this.map)  //not yet initialized
+        if (!VicinityMap.map)  //not yet initialized
             return;
             
-        if (this.positionMarker)
-            this.map.removeLayer(this.positionMarker);
+        if (VicinityMap.positionMarker)
+            VicinityMap.map.removeLayer(VicinityMap.positionMarker);
         
-        this.positionMarker = L.marker( newPos );
-        this.positionMarker.addTo(this.map);//.bindPopup("You are here");
+        VicinityMap.positionMarker = L.marker( newPos );
+        VicinityMap.positionMarker.addTo(VicinityMap.map);//.bindPopup("You are here");
     },
 
     
 	renderFrustum: function()
 	{
-        if (!this.map)  //not yet initialized
+        if (!VicinityMap.map)  //not yet initialized
             return;
 
 
-	    if (this.frustum)
+	    if (VicinityMap.frustum)
 	    {
-	        this.map.removeLayer(this.frustum);
-	        this.frustum = null;
+	        VicinityMap.map.removeLayer(VicinityMap.frustum);
+	        VicinityMap.frustum = null;
         }
 	    
 	    var effectivePosition = Controller.getEffectivePosition();
@@ -66,12 +66,12 @@ var VicinityMap = {
 	    var rightDir =[ Math.cos(-phi) * lookDir[0] - Math.sin(-phi) * lookDir[1], 
 	                    Math.sin(-phi) * lookDir[0] + Math.cos(-phi) * lookDir[1] ];
 
-        var len = Math.pow(0.5, this.map.getZoom())*2000;
+        var len = Math.pow(0.5, VicinityMap.map.getZoom())*2000;
         //console.log(map.getZoom(), len);
 	    var pA = { lat: effectivePosition.lat + leftDir[1]*len*localAspect,  lng: effectivePosition.lng + leftDir[0]*len };
 	    var pB = { lat: effectivePosition.lat + rightDir[1]*len*localAspect, lng: effectivePosition.lng + rightDir[0]*len};
 	    var line = [effectivePosition, pA, pB, effectivePosition ]
-	    this.frustum = L.polygon(line, {color: 'red', noClip: 'true', fillColor:"white", fillOpacity:0.4}).addTo(this.map);
+	    VicinityMap.frustum = L.polygon(line, {color: 'red', noClip: 'true', fillColor:"white", fillOpacity:0.4}).addTo(VicinityMap.map);
 	},
 
     onMapClick: function(e)
