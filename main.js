@@ -98,10 +98,49 @@ function offerMetadataLoaded(offer)
     document.addEventListener("keyup",   function(ev) {Controller.onKeyUp(ev);},  false);
 	document.body.onresize = onResize;
 
+    aLayout.addEventListener(  "click", function(ev) { ev.preventDefault(); onTabClicked(aLayout,   divLayout);} );
+    aSunPos.addEventListener(  "click", function(ev) { ev.preventDefault(); onTabClicked(aSunPos,   divSunPos);} );
+    aStats.addEventListener(   "click", function(ev) { ev.preventDefault(); onTabClicked(aStats,    divStats);} );
+    aVicinity.addEventListener("click", function(ev) { ev.preventDefault(); onTabClicked(aVicinity, divVicinity);} );
+
+    divVicinity.onShow =  onVicinityMapShow;
+    divLayout.onShow = onApartmentMapShow;
     mapApartment = new Apartment(offer.layoutId, Controller.position, offer.yaw != null ? offer.yaw : 0.0, apartmentFloorHeight);
     mapApartment.onLoaded = onApartmentLoaded;
     //onChangeLocation();
 }    
+
+function onTabClicked(anchor, tab)
+{
+    var anchors = [aLayout, aSunPos, aStats, aVicinity];
+    var tabs =    [divLayout, divSunPos, divStats, divVicinity];
+    
+    for (var i in anchors)
+        anchors[i].className = "tabHeader";
+
+    anchor.className = "tabHeader tabHeaderSelected";
+        
+    for (var i in tabs)
+        tabs[i].style.display = "none";
+    
+    tab.style.display = "";
+    
+    if (tab.onShow)
+        tab.onShow();
+
+}
+
+function onVicinityMapShow()
+{
+    VicinityMap.map.invalidateSize();
+}
+
+function onApartmentMapShow()
+{
+    ApartmentMap.resize();
+    ApartmentMap.render(mapApartment.localToPixelCoordinates( Controller.localPosition ));
+}
+
 
 var daysPerMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
@@ -208,6 +247,9 @@ function init()
     $("#slider-day .ui-slider-handle").unbind('keydown');    
     $("#slider-time .ui-slider-handle").unbind('keydown');    
     
+    if (!glu.performShadowMapping)
+        aSunPos.style = "display:none";
+    
     var req = new XMLHttpRequest();
     req.open("GET", OFFER_REST_BASE_URL + "/get/offer/" + rowId );
     req.responseType = "";
@@ -248,7 +290,8 @@ function onApartmentLoaded()
     mapBuildings = new Buildings(gl, Controller.position);
     mapBuildings.onLoaded = scheduleFrameRendering;
     
-    mapSun = new Sun( Controller.position.lat, Controller.position.lng );
+    if (glu.performShadowMapping)
+        mapSun = new Sun( Controller.position.lat, Controller.position.lng );
     onSunPositionChanged( $( "#slider-day" ).slider( "value"), $( "#slider-time" ).slider( "value"));
     
     //VicinityMap.updatePositionMarker( Controller.getEffectivePosition() );

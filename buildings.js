@@ -740,8 +740,8 @@ Buildings.prototype.render = function(modelViewMatrix, projectionMatrix) {
     //console.log(pos.x, pos.y, pos.z);
     gl.uniform3f(Shaders.building.locations.cameraPos, pos.x, pos.y, pos.z);
 
-    gl.activeTexture(gl.TEXTURE0);  //successive commands (here 'gl.bindTexture()') apply to texture unit 0
-    gl.bindTexture(gl.TEXTURE_2D, null); //render geometry without texture
+    //gl.activeTexture(gl.TEXTURE0);  //successive commands (here 'gl.bindTexture()') apply to texture unit 0
+    //gl.bindTexture(gl.TEXTURE_2D, null); //render geometry without texture
     
     gl.enable(gl.POLYGON_OFFSET_FILL);  //to prevent z-fighting between rendered edges and faces
     gl.polygonOffset(1,1);
@@ -757,7 +757,7 @@ Buildings.prototype.render = function(modelViewMatrix, projectionMatrix) {
 	gl.enableVertexAttribArray(Shaders.flat.locations.vertexPosition); // setup vertex coordinate buffer
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.edgeVertices);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
-	gl.vertexAttribPointer(Shaders.flat.locations.vertexPosition, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
+	gl.vertexAttribPointer(Shaders.flat.locations.vertexPosition, 3, gl.FLOAT, false, 0, 0);  //assigns array "edgeVertices" bound above as the vertex attribute "vertexPosition"
 
     var mvpMatrix = mat4.create();
     mat4.mul(mvpMatrix, projectionMatrix, modelViewMatrix);

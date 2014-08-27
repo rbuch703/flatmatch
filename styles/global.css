@@ -7,6 +7,22 @@ emph {
     font-style:italic;
 }
 
+.tabHeader {
+    text-decoration:none;
+    color: #444;
+    padding-right:10px;
+    padding-left: 10px;
+    font-weight:bold;
+    border-bottom: 3px solid #777;
+    border-right: 1px solid #444;
+    border-left: 1px solid #444;
+}
+
+.tabHeaderSelected {
+    border-bottom: 3px solid #D44;
+}
+
+/*
 .mandatory { color:#f6931f; font-weight:bold}
 
-.myTable * {  vertical-align:text-top; }
+.myTable * {  vertical-align:text-top; }*/
