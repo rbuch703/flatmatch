@@ -3,7 +3,7 @@
 /**
  * @constructor
  */
-function Apartment(id, position, yaw, height) {
+function Apartment(id, scale, layout, yaw, height) {
 
     this.yawShift = yaw;
     this.heightOffset = height;
@@ -11,35 +11,19 @@ function Apartment(id, position, yaw, height) {
     this.textures = [];
     
     this.layoutId = id;
-    this.layoutRequest = new XMLHttpRequest();
-    this.layoutRequest.open("GET", OFFER_REST_BASE_URL + "/get/layoutMetadata/" + id);
-    this.layoutRequest.responseType = "";
-    //this.layoutRequest.apartment = this;
-    var aptTmp = this;
-    this.layoutRequest.onreadystatechange = function() 
-    { 
-        if (this.readyState != 4 || this.response == null)
-            return;
-
-        
-        var response = JSON.parse(this.response);
-        aptTmp.scale = response.scale;
-        aptTmp.startingPos = response.geometry.startingPosition;
-        aptTmp.startingPos[2] = 0;
-        
-        var walls = response.geometry.geometry;
-        var box   = response.geometry.box;
-        if (box == undefined)
-            box = [];
-        aptTmp.repositionGeometry(walls, box, position);
-        //aptTmp.metadata = this.response;
-        aptTmp.buildGlGeometry(walls, box);
-        
-        if (aptTmp.onLoaded)
-            aptTmp.onLoaded();
-    }
     
-    this.layoutRequest.send();
+    this.scale = scale;
+    this.startingPos = layout.startingPosition;
+    this.startingPos[2] = 0;
+        
+    var walls = layout.geometry;
+    var box   = layout.box;
+    
+    if (box == undefined)
+        box = [];
+
+    this.repositionGeometry(walls, box);
+    this.buildGlGeometry(   walls, box);
 }
 
 Apartment.prototype.render = function(modelViewMatrix, projectionMatrix, shadowMvpMatrix)
@@ -141,66 +125,9 @@ Apartment.prototype.renderDepth = function(modelViewMatrix, projectionMatrix)
 
 
     gl.enable(gl.CULL_FACE);
-    
-    
-
 }
 
-			
-			
-Apartment.prototype.handleLoadedTexture = function(image) {
 
-    if (this.textures[ image.id])
-        gl.deleteTexture(this.textures[ image.id ] );
-        
-    this.textures[ image.id ] = glu.createTexture( image );
-    if (Controller.onRequestFrameRender)
-        Controller.onRequestFrameRender();
-}
-
-/* scoping hack: needs to be a dedicated function, because it is
- *               called within a loop over j. Without a dedicated function,
- *               the 'texture' and "j" variable would be shared between all 
- *               loop iterations, leading to the same texture being loaded 
- *               over and over again */
-Apartment.prototype.requestTexture = function(layoutId, textureId, segmentData)
-{
-
-    //if texture was send as part of JSON geometry data, use it directly
-    if (segmentData.texture !== undefined)
-    {
-        var image = new Image();
-        image.id = textureId;
-        image.apartment = this;
-        image.onload = function() { this.apartment.handleLoadedTexture(image); };
-        image.src = "data:image/png;base64," + segmentData.texture;
-        return;        
-    }
-
-
-    var canvas = document.createElement('canvas');
-    canvas.width  = 1;
-    canvas.height = 1;
-    var ctx = canvas.getContext("2d");
-    
-    var l = Math.floor((Math.random() * 256)).toString(16);
-    ctx.fillStyle = "#"+l+l+l;
-    //console.log("#"+r+g+b, ctx.fillStyle);
-    
-    ctx.fillRect( 0, 0, 1, 1 );    
-
-    this.textures[ textureId] = glu.createTexture( canvas );
-
-
-    var image = new Image();
-    image.id = textureId;
-    image.apartment = this;
-    image.onload = function() { this.apartment.handleLoadedTexture(image); };
-    /*image.src = "tiles/tile_"+j+".png"; */
-    image.crossOrigin = "anonymous";
-    image.src = OFFER_REST_BASE_URL + "/get/texture/" + layoutId + "/" + textureId;
-}
-	
 Apartment.getTrianglesVertices = function(seg)
 {
     /* D-C   
@@ -221,6 +148,39 @@ Apartment.getTrianglesVertices = function(seg)
 
     return [A, B, C, A, C, D];
 }
+
+// need not be static, but we need to bind the apartment to a variable different from "this" anyway,
+// iin order to use it in the anonymous "onload" function.
+Apartment.loadImage = function(apartment, id, data)
+{
+    var image = new Image();
+    image.id = id;
+    image.onload = function() 
+    { 
+        glu.updateTexture( apartment.textures[image.id], image);
+        
+        if (Controller.onRequestFrameRender)
+            Controller.onRequestFrameRender();
+    };
+    
+    image.src = "data:image/png;base64," + data;
+}
+
+Apartment.prototype.updateTextures = function(textures)
+{
+    console.log("New texture set arrived");
+    var apartment = this;
+    for (var i = 0; i < this.numVertices/6; i++)
+    
+    {
+        if (textures[i])
+            Apartment.loadImage(this, i, textures[i]);
+            
+        //return;        
+    }
+    
+}
+
 
 /**
  *  creates the 3D GL geometry scene.
@@ -249,7 +209,12 @@ Apartment.prototype.buildGlGeometry = function(walls, box)
     this.normals  = glu.createArrayBuffer(normals);
     
     for (var i = 0; i < this.numVertices/6; i++) {
-        this.requestTexture(this.layoutId, i, walls[i]);
+    
+        var l = Math.floor((Math.random() * 256));
+        var initialColor = new Uint8Array([l, l, l]);
+        this.textures[i] = glu.createTextureFromBytes( initialColor );
+    
+        //this.requestTexture(this.layoutId, i, walls[i]);
     }
 
     var boxVertices = [];
@@ -303,7 +268,7 @@ function getAABB( segments, aabbIn)
 }
 
 
-Apartment.prototype.repositionGeometry = function(walls, box, position)
+Apartment.prototype.repositionGeometry = function(walls, box)
 {
     //step 1: move geometry to correct this.heightOffset;
     //step 2: shift geometry apartment to relocate its center to (0,0) to give its 'position' a canonical meaning
@@ -328,23 +293,6 @@ Apartment.prototype.repositionGeometry = function(walls, box, position)
     
     rotate( this.startingPos, this.yawShift);
     this.startingPos[1] = - this.startingPos[1];
-    
-    
-    //step 4: move to selected position
-    var earthCircumference = 2 * Math.PI * (6378.1 * 1000);
-    var metersPerDegreeLat = earthCircumference / 360;
-    var metersPerDegreeLng = metersPerDegreeLat * Math.cos( Controller.position.lat / 180 * Math.PI);
-    var dx = (position.lng - Controller.position.lng) * metersPerDegreeLng;
-    var dy = (position.lat - Controller.position.lat) * metersPerDegreeLat;
-
-    //FIXME: why do those signs have to be different?
-    Apartment.moveBy(walls, dx, -dy, 0);
-    Apartment.moveBy(box,   dx, -dy, 0);
-    //console.log("Walls: %o, Box: %o", walls, box);
-    this.worldShift = [dx, dy];
-    //console.log("distance to apartment: dx=%sm, dy=%sm", dx, dy);
-    this.startingPos[0] +=dx;
-    this.startingPos[1] -=dy;
 }
 
 Apartment.rotateBy = function(segments, yaw)
@@ -371,14 +319,12 @@ Apartment.moveBy = function(segments, dx, dy, dz)
 
 Apartment.prototype.localToPixelCoordinates = function(localPosition)
 {
-    if (!mapApartment.worldShift || !mapApartment.pixelShift || mapApartment.yawShift === undefined)
+    if (!mapApartment.pixelShift || mapApartment.yawShift === undefined)
         return [0,0];
 
     var pos = [];
-    pos[0] =    localPosition.x - this.worldShift[0] ;
-    pos[1] = - (localPosition.y - this.worldShift[1]);
-    //console.log("After World Shift: %s", p1);
-
+    pos[0] =   localPosition.x;
+    pos[1] = - localPosition.y;
 
     rotate(pos, - mapApartment.yawShift);
     pos = add2(pos, mapApartment.pixelShift);
@@ -390,7 +336,7 @@ Apartment.prototype.localToPixelCoordinates = function(localPosition)
 
 Apartment.prototype.pixelToLocalCoordinates = function(pixelPosition)
 {
-    if (!mapApartment.worldShift || !mapApartment.pixelShift || mapApartment.yawShift === undefined)
+    if (!mapApartment.pixelShift || mapApartment.yawShift === undefined)
         return [0,0];
 
     pixelPosition[0] /= mapApartment.scale;
@@ -399,8 +345,8 @@ Apartment.prototype.pixelToLocalCoordinates = function(pixelPosition)
     rotate(pixelPosition, mapApartment.yawShift);
 
     return {
-        "x":   pixelPosition[0] + this.worldShift[0],
-        "y": - pixelPosition[1] + this.worldShift[1]
+        "x":   pixelPosition[0],
+        "y": - pixelPosition[1]
     }
 }
 

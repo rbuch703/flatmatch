@@ -13,8 +13,8 @@ var gl;
 var fieldOfView = 90/16*9;
 var layoutId;// = 158;
 var rowId;
-var OFFER_REST_BASE_URL = "http://rbuch703.de:1080/rest";
-//var OFFER_REST_BASE_URL = "http://localhost:1080/rest"
+//var OFFER_REST_BASE_URL = "http://rbuch703.de:1080/rest";
+var OFFER_REST_BASE_URL = "http://localhost:1080/rest_v2"
 
 
 //pasted from controller.js; FIXME: find better common place
@@ -52,34 +52,9 @@ function asPriceString( val)
     return res + "," + tmp + " €";
 }
 
-
-function offerMetadataLoaded(offer)
+function initEventHandler()
 {
-    Controller.position = {"lat": offer.lat, "lng": offer.lon};
-    //educated guess (3m per level, plus 1m for basement part that is above ground
-    var apartmentFloorHeight = offer.level * 3.0 + 1.0;
-    Controller.localPosition.z =  apartmentFloorHeight+ 1.6; 
-    layoutId = offer.layoutId;
-    if (offer.yaw != null)
-        Controller.viewAngleYaw = parseFloat(offer.yaw);
-        
-    lblAddress.innerHTML = offer.address;
-    lblLevel.innerHTML = getFloorName(offer.level);
-    lblSize.innerHTML = offer.area + "m²";
-    lblRooms.innerHTML = offer.numRooms;
-    lblRent.innerHTML = asPriceString(offer.rent);
-    lblDetails.innerHTML = "<a target='_blank' href='http://www.wobau-magdeburg.de/"+ offer.detailsUrl + "'>[in neuem Tab]</a>"
-    //addressLog.innerHTML = offer.address;
-
-        
-    Controller.onRequestFrameRender = scheduleFrameRendering;
-    
-    VicinityMap.init("mapDiv", offer.lat, offer.lon);
-
-    if (!gl)
-        return;
-
-    /* prevention of default event handling is required for:
+   /* prevention of default event handling is required for:
      * - 'mousedown': otherwise dragging the mouse cursor beyond the canvas would select the page text in chrome
      * - 'keydown': otherwise using the cursor keys for navigation would also scroll the page
      */
@@ -100,14 +75,90 @@ function offerMetadataLoaded(offer)
 
     aLayout.addEventListener(  "click", function(ev) { ev.preventDefault(); onTabClicked(aLayout,   divLayout);} );
     aSunPos.addEventListener(  "click", function(ev) { ev.preventDefault(); onTabClicked(aSunPos,   divSunPos);} );
-    //aStats.addEventListener(   "click", function(ev) { ev.preventDefault(); onTabClicked(aStats,    divStats);} );
     aVicinity.addEventListener("click", function(ev) { ev.preventDefault(); onTabClicked(aVicinity, divVicinity);} );
 
     divVicinity.onShow =  onVicinityMapShow;
     divLayout.onShow = onApartmentMapShow;
-    mapApartment = new Apartment(offer.layoutId, Controller.position, offer.yaw != null ? offer.yaw : 0.0, apartmentFloorHeight);
-    mapApartment.onLoaded = onApartmentLoaded;
-    //onChangeLocation();
+    
+	ApartmentMap.onClick = function(x,y) { 
+	    //console.log("clicked at (%s, %s)", x, y);
+        var newPos = mapApartment.pixelToLocalCoordinates([x,y]);
+        Controller.localPosition.x = newPos.x;
+        Controller.localPosition.y = newPos.y;
+        scheduleFrameRendering();
+    };
+    
+    Controller.onRequestFrameRender = scheduleFrameRendering;
+    
+    
+}
+
+function offerMetadataLoaded(offer)
+{
+    if (!gl)
+        return;
+
+    var req = new XMLHttpRequest();
+    req.open("GET", OFFER_REST_BASE_URL + "/get/textures/" + offer.layoutId );
+    req.responseType = "";
+    req.onreadystatechange = function() 
+    { 
+        if (req.readyState != 4 || req.response == null)
+            return;
+
+        mapApartment.updateTextures( JSON.parse(req.response) );
+    }
+    req.send();
+
+
+    //layoutId = offer.layoutId;
+    //educated guess (3m per level, plus 1m for basement part that is above ground
+    var apartmentFloorHeight = offer.level * 3.0 + 1.0;
+    Controller.position = {"lat": offer.lat, "lng": offer.lon};
+
+    if (offer.yaw != null)
+        Controller.viewAngleYaw = parseFloat(offer.yaw);
+    
+    if (glu.performShadowMapping)
+        mapSun = new Sun( Controller.position.lat, Controller.position.lng );
+        
+    //initialize mapSun date/time
+    onSunPositionChanged( $( "#slider-day" ).slider( "value"), $( "#slider-time" ).slider( "value"));
+
+    mapPlane = new MapLayer(gl, Controller.position);
+    mapPlane.onProgress= scheduleFrameRendering;
+
+    mapBuildings = new Buildings(gl, Controller.position);
+    mapBuildings.onLoaded = scheduleFrameRendering;
+
+    mapApartment = new Apartment(offer.layoutId, offer.scale, offer.layout, offer.yaw != null ? offer.yaw : 0.0, apartmentFloorHeight);
+
+    Controller.localPosition.x = mapApartment.startingPos[0];
+    Controller.localPosition.y = mapApartment.startingPos[1];
+    Controller.localPosition.z =  apartmentFloorHeight + 1.6; 
+
+    
+    lblAddress.innerHTML = offer.address;
+    lblLevel.innerHTML = getFloorName(offer.level);
+    lblSize.innerHTML = offer.area + "m²";
+    lblRooms.innerHTML = offer.numRooms;
+    lblRent.innerHTML = asPriceString(offer.rent);
+    //FIXME: potential XSS flaw
+    lblDetails.innerHTML = "<a target='_blank' href='http://www.wobau-magdeburg.de/"+ offer.detailsUrl + "'>[in neuem Tab]</a>"
+    //addressLog.innerHTML = offer.address;
+
+
+    CollisionHandling.init(offer.layoutId);
+    CollisionHandling.processLayout(offer.layout.layoutImageSize[0], offer.layout.layoutImageSize[1], offer.collisionMap);
+
+    VicinityMap.init("mapDiv", offer.lat, offer.lon);
+
+    ApartmentMap.init(minimapCanvas, offer.layoutId);
+
+    initEventHandler();
+    
+    scheduleFrameRendering();
+
 }    
 
 function onTabClicked(anchor, tab)
@@ -267,37 +318,6 @@ function init()
 
 //var res;
 
-function onApartmentLoaded()
-{
-    Controller.localPosition.x = mapApartment.startingPos[0];
-    Controller.localPosition.y = mapApartment.startingPos[1];
-    
-    /*map.panTo(Controller.position);
-    if (map.getZoom() < 16)
-        map.setZoom(16);*/
-
-    ApartmentMap.init(minimapCanvas, layoutId);
-	
-	ApartmentMap.onClick = function(x,y) { 
-        var newPos = mapApartment.pixelToLocalCoordinates([x,y]);
-        Controller.localPosition.x = newPos.x;
-        Controller.localPosition.y = newPos.y;
-        scheduleFrameRendering();
-    };
-
-    mapPlane = new MapLayer(gl, Controller.position);
-    mapPlane.onProgress= scheduleFrameRendering;
-
-    mapBuildings = new Buildings(gl, Controller.position);
-    mapBuildings.onLoaded = scheduleFrameRendering;
-    
-    if (glu.performShadowMapping)
-        mapSun = new Sun( Controller.position.lat, Controller.position.lng );
-    onSunPositionChanged( $( "#slider-day" ).slider( "value"), $( "#slider-time" ).slider( "value"));
-    
-    //VicinityMap.updatePositionMarker( Controller.getEffectivePosition() );
-    scheduleFrameRendering();
-}
 
 var frameRenderingScheduled = false;
 function scheduleFrameRendering()
@@ -407,7 +427,7 @@ function renderScene()
 
     var modelViewMatrix = glu.lookAt(Controller.viewAngleYaw, Controller.viewAnglePitch, Controller.localPosition);
     var projectionMatrix = mat4.create();
-    mat4.perspective(projectionMatrix, fieldOfView/180*Math.PI, webGlCanvas.width / webGlCanvas.height, 0.2, 5100.0);
+    mat4.perspective(projectionMatrix, fieldOfView/180*Math.PI, webGlCanvas.width / webGlCanvas.height, 0.15, 5100.0);
 
     gl.enable(gl.CULL_FACE);
 

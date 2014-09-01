@@ -109,7 +109,7 @@ var Controller = {
             Controller.viewAnglePitch = -60;
     },
     
-    move: function(dx, dy)
+    move: function(dRight, dForward)
     {
         var arc = Controller.viewAngleYaw / 180 * Math.PI;
         var forwardX = Math.sin(arc);
@@ -118,11 +118,19 @@ var Controller = {
         var rightX = Math.sin(arc + Math.PI/2.0);
         var rightY = Math.cos(arc + Math.PI/2.0);
         
-        Controller.localPosition.x += dx*rightX;
-        Controller.localPosition.y += dx*rightY;
-        
-        Controller.localPosition.x += dy*forwardX;
-        Controller.localPosition.y += dy*forwardY;
+        var dx = dRight*rightX + dForward*forwardX;
+        var dy = dRight*rightY + dForward*forwardY;
+
+        if (!mapApartment)
+            return;
+            
+        var newPixelPos = mapApartment.localToPixelCoordinates( {x:Controller.localPosition.x + dx, y: Controller.localPosition.y + dy} );
+        //console.log("newPixelPos: %o", newPixelPos);
+        if (!CollisionHandling.moveAllowed( newPixelPos[0], newPixelPos[1]))
+            return;
+
+        Controller.localPosition.x += dx;
+        Controller.localPosition.y += dy;
    
     },
 	
