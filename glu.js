@@ -120,7 +120,7 @@ glu.init = function()
      *       presence of WEBGL_depth_texture as a hint that the GPU is powerful enough to:
      *       1. support a shader precision high enough for shadow mapping
      *       2. render shadow-mapped geometry in real-time.*/
-    glu.performShadowMapping = false;//glu.depthTextureExtension ? true : false;
+    glu.performShadowMapping = !!glu.depthTextureExtension;
 }
 
 glu.setMaxAnisotropy = function()
@@ -150,6 +150,36 @@ glu.createTexture = function(image)
     
     return texId;
 }
+
+glu.createTextureFromBytes = function(bytes)
+{
+    var texId = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE0);
+            
+    gl.bindTexture(gl.TEXTURE_2D, texId);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, 1, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, bytes); //load texture data
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);                  //set zoom-in filter to linear interpolation
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);    //set zoom-out filter to linear interpolation between pixels and between mipmap levels
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); // texCords are clamped 
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); // to range [0..1]
+    gl.generateMipmap(gl.TEXTURE_2D);                                     // automatic mipmap generation
+    
+    glu.setMaxAnisotropy();
+    
+    return texId;
+
+}
+
+glu.updateTexture = function(texture, image)
+{
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image); //load texture data
+    gl.generateMipmap(gl.TEXTURE_2D);                                     // automatic mipmap generation
+    glu.setMaxAnisotropy();
+}
+
+
 
 // webGL has only limited support for textures whose width and height are not powers of two:
 // those may not use automatic mipmapping, and must use the warp mode CLAMP_TO_EDGE
