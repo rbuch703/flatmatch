@@ -7,6 +7,10 @@ emph {
     font-style:italic;
 }
 
+h3 {
+    font-size: 1.3em;
+}
+
 .tabHeader {
     text-decoration:none;
     color: #444;

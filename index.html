@@ -64,27 +64,29 @@
 
 <!--<div style="width:100%; height:100%"> -->
 <div id="leftNavDiv" style="position:absolute; left:0px; width:30%;top:20px;bottom:20px;overflow:auto">
-    <div style="padding-left:20px;padding-right: 20px; height:100%">
-        <a href="#" id="aStats" class="tabHeader tabHeaderSelected">Daten</a>
-        <a href="#" id="aLayout" class="tabHeader">Grundriss</a>
-        <a href="#" id="aVicinity" class="tabHeader">Umgebung</a>
-        <a href="#" id="aSunPos" class="tabHeader">Sonnenstand</a>
+    <div style="padding-left:20px;padding-right: 20px; ">
 
-        <div id="divStats" >
-            <h3>Angebotsinformationen</h3>
-            <table>
-                <tr><td style="font-weight:bold">Anschrift:</td><td id="lblAddress"></td></tr>
-                <tr><td style="font-weight:bold">Anzahl Zimmer:</td><td id="lblRooms"></td></tr>
-                <tr><td style="font-weight:bold">Größe:</td><td id="lblSize"></td></tr>
-                <tr><td style="font-weight:bold">Etage:</td><td id="lblLevel"></td></tr>
-                <tr><td style="font-weight:bold">Kaltmiete+Nebenkosten:</td><td id="lblRent"></td></tr>
-                <tr><td style="font-weight:bold">weitere Informationen</td><td id="lblDetails"></td></tr>
-                
-            </table>
+        <h3>Wohnungsinformationen</h3>
+        <table>
+            <tr><td style="font-style:italic">Anschrift:</td><td id="lblAddress"></td></tr>
+            <tr><td style="font-style:italic">Anzahl Zimmer:</td><td id="lblRooms"></td></tr>
+            <tr><td style="font-style:italic">Größe:</td><td id="lblSize"></td></tr>
+            <tr><td style="font-style:italic">Etage:</td><td id="lblLevel"></td></tr>
+            <tr><td style="font-style:italic">Kaltmiete+Nebenkosten:</td><td id="lblRent"></td></tr>
+            <tr><td style="font-style:italic">weitere Informationen</td><td id="lblDetails"></td></tr>
+            
+        </table>
+        <br>
+        <h3>Weitere Informationen</h3>
+        <div style="padding-bottom:20px">
+            <div style="border-bottom: 1px solid #777"> </div>
+            <a href="#" id="aLayout" class="tabHeader tabHeaderSelected">Grundriss</a>
+            <a href="#" id="aVicinity" class="tabHeader">Umgebung</a>
+            <a href="#" id="aSunPos" class="tabHeader">Sonnenstand</a>
         </div>
 
-        <div id="divSunPos" style="padding:20px;display:none">
-            <h4>Sonnenstand </h4>
+        <div id="divSunPos" style="display:none">
+            <!-- <h3>Sonnenstand </h3> -->
             <p>
             Tag: <span id="lblDay" ></span>
             <div id="slider-day" style="width:100%"></div></p>
@@ -93,13 +95,13 @@
             <div id="slider-time" style="width:100%"></div>   
             </p>
         </div>
-        <div id="divLayout" style="display:none">
-            <h4>Wohnungsgrundriss: </h4>    
-	        <canvas id="minimapCanvas" style="width:100%; height:100%; border: 1px solid black" ></canvas>
+        <div id="divLayout" style="">
+            <!-- <h3>Wohnungsgrundriss: </h3> -->
+	        <canvas id="minimapCanvas" style="width:100%; height:600px; border: 1px solid #777" ></canvas>
         </div>
 
         <div id="divVicinity" style="display:none">
-            <h4>Nähere Umgebung </h4>
+            <!-- <h3>Nähere Umgebung </h3> -->
             <div id="mapDiv" style="width:100%; height:600px;"> </div>
         </div>
     </div>

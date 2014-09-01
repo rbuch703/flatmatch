@@ -26,6 +26,37 @@ var ApartmentMap = {
 
     },
     
+    scaledLayout: null,
+    
+    createScaledLayout: function(width, height)
+    {
+        if (ApartmentMap.scaledLayout && 
+            ApartmentMap.scaledLayout.width == width && 
+            ApartmentMap.scaledLayout.height == height)
+        { 
+            return;
+        }
+            
+        // Create a canvas element
+        ApartmentMap.scaledLayout = document.createElement('canvas');
+        ApartmentMap.scaledLayout.width = width;
+        ApartmentMap.scaledLayout.height = height;
+
+        // Get the drawing context
+        var ctx = ApartmentMap.scaledLayout.getContext('2d');
+
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0,0,width,height);    
+
+	    var canvasScale = Math.min( ApartmentMap.canvas.width  / ApartmentMap.layoutImage.width, 
+	                                ApartmentMap.canvas.height / ApartmentMap.layoutImage.height);
+
+	    ctx.globalAlpha = 0.5;
+	    ctx.drawImage(ApartmentMap.layoutImage, 0, 0, ApartmentMap.layoutImage.width * canvasScale, ApartmentMap.layoutImage.height * canvasScale);
+	    ctx.globalAlpha = 1.0;
+
+    },
+    
 	render: function( layoutPixelPosition)
 	{
 	    if (!ApartmentMap.layoutImage)
@@ -35,13 +66,13 @@ var ApartmentMap = {
 	        ApartmentMap.canvas.context2d = ApartmentMap.canvas.getContext("2d");
 
         var ctx = ApartmentMap.canvas.context2d;
-        ctx.clearRect ( 0 , 0 , ApartmentMap.canvas.width , ApartmentMap.canvas.height );
+        //ctx.clearRect ( 0 , 0 , ApartmentMap.canvas.width , ApartmentMap.canvas.height );
 	    var canvasScale = Math.min( ApartmentMap.canvas.width  / ApartmentMap.layoutImage.width, 
 	                                ApartmentMap.canvas.height / ApartmentMap.layoutImage.height);
-	    ctx.globalAlpha = 0.5;
-	    ctx.drawImage(ApartmentMap.layoutImage, 0, 0, ApartmentMap.layoutImage.width * canvasScale, ApartmentMap.layoutImage.height * canvasScale);
-	    ctx.globalAlpha = 1.0;
-	    
+
+        ApartmentMap.createScaledLayout(ApartmentMap.canvas.width, ApartmentMap.canvas.height);
+        ctx.drawImage(ApartmentMap.scaledLayout, 0, 0);
+
 	    var pos = layoutPixelPosition;
 
 	    pos[0] *= canvasScale;

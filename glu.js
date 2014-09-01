@@ -120,7 +120,7 @@ glu.init = function()
      *       presence of WEBGL_depth_texture as a hint that the GPU is powerful enough to:
      *       1. support a shader precision high enough for shadow mapping
      *       2. render shadow-mapped geometry in real-time.*/
-    glu.performShadowMapping = false;//glu.depthTextureExtension ? true : false;
+    glu.performShadowMapping = !!glu.depthTextureExtension;
 }
 
 glu.setMaxAnisotropy = function()

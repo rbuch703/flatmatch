@@ -100,7 +100,7 @@ function offerMetadataLoaded(offer)
 
     aLayout.addEventListener(  "click", function(ev) { ev.preventDefault(); onTabClicked(aLayout,   divLayout);} );
     aSunPos.addEventListener(  "click", function(ev) { ev.preventDefault(); onTabClicked(aSunPos,   divSunPos);} );
-    aStats.addEventListener(   "click", function(ev) { ev.preventDefault(); onTabClicked(aStats,    divStats);} );
+    //aStats.addEventListener(   "click", function(ev) { ev.preventDefault(); onTabClicked(aStats,    divStats);} );
     aVicinity.addEventListener("click", function(ev) { ev.preventDefault(); onTabClicked(aVicinity, divVicinity);} );
 
     divVicinity.onShow =  onVicinityMapShow;
@@ -112,8 +112,8 @@ function offerMetadataLoaded(offer)
 
 function onTabClicked(anchor, tab)
 {
-    var anchors = [aLayout, aSunPos, aStats, aVicinity];
-    var tabs =    [divLayout, divSunPos, divStats, divVicinity];
+    var anchors = [aLayout, aSunPos, aVicinity];
+    var tabs =    [divLayout, divSunPos, divVicinity];
     
     for (var i in anchors)
         anchors[i].className = "tabHeader";
