@@ -349,6 +349,7 @@ function initGl()
 	    //remove controls that depend on webGL, and show error messages
         glErrorDiv.style.display = "inherit";
         leftNavDiv.style.display = "none";
+        screenshotImg.src="images/screenshot.png"
         gl = null;
         contentDiv.removeChild(webGlCanvas);
 		return;

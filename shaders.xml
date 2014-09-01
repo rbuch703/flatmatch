@@ -46,7 +46,7 @@
         float diffuse = abs( 0.5 * dot(vView, normal) );
 
         //gl_FragColor = vec4( (normal + 1.0)/2.0, 1.0);
-        gl_FragColor = diffuse > 0.0 ? vec4( vec3(diffuse+0.3), 1.0): vec4(-diffuse+0.3, 0.0, 0.0, 1.0);
+        gl_FragColor = diffuse > 0.0 ? vec4( vec3(diffuse+0.4), 1.0): vec4(-diffuse+0.4, 0.0, 0.0, 1.0);
         
         if (texCoordV.z == 0.0) //HACK: z==0 --> building height was just guessed --> tint it red
             gl_FragColor = gl_FragColor * vec4(1.0, 0.9, 0.95, 1.0);
