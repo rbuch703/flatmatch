@@ -13,8 +13,8 @@ var gl;
 var fieldOfView = 90/16*9;
 var layoutId;// = 158;
 var rowId;
-//var OFFER_REST_BASE_URL = "http://rbuch703.de:1080/rest";
-var OFFER_REST_BASE_URL = "http://localhost:1080/rest_v2"
+var OFFER_REST_BASE_URL = "http://rbuch703.de:1080/rest_v2";
+//var OFFER_REST_BASE_URL = "http://localhost:1080/rest_v2"
 
 
 //pasted from controller.js; FIXME: find better common place
@@ -129,7 +129,12 @@ function offerMetadataLoaded(offer)
     mapPlane.onProgress= scheduleFrameRendering;
 
     mapBuildings = new Buildings(gl, Controller.position);
-    mapBuildings.onLoaded = scheduleFrameRendering;
+    mapBuildings.onLoaded = function()
+    {
+        //buildings are occluders in the shadow computation, their presence may thus shift shadows
+        shadows.dirty = true;
+        scheduleFrameRendering();
+    }
 
     mapApartment = new Apartment(offer.layoutId, offer.scale, offer.layout, offer.yaw != null ? offer.yaw : 0.0, apartmentFloorHeight);
 
@@ -178,7 +183,7 @@ function onTabClicked(anchor, tab)
     
     if (tab.onShow)
         tab.onShow();
-
+    
 }
 
 function onVicinityMapShow()

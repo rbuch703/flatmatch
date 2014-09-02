@@ -150,7 +150,7 @@ Apartment.getTrianglesVertices = function(seg)
 }
 
 // need not be static, but we need to bind the apartment to a variable different from "this" anyway,
-// iin order to use it in the anonymous "onload" function.
+// in order to use it in the anonymous "onload" function.
 Apartment.loadImage = function(apartment, id, data)
 {
     var image = new Image();
@@ -168,7 +168,7 @@ Apartment.loadImage = function(apartment, id, data)
 
 Apartment.prototype.updateTextures = function(textures)
 {
-    console.log("New texture set arrived");
+    //console.log("New texture set arrived");
     var apartment = this;
     for (var i = 0; i < this.numVertices/6; i++)
     

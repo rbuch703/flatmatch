@@ -24,6 +24,11 @@ h3 {
 
 .tabHeaderSelected {
     border-bottom: 3px solid #D44;
+    border-top: 1px solid white;
+}
+
+a {
+    outline: none; /* do not draw a dotted rectangle around a focused anchor */
 }
 
 /*
