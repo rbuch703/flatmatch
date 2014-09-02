@@ -133,6 +133,18 @@ var Controller = {
         Controller.localPosition.y += dy;
    
     },
+    
+    moveTo: function(localX, localY)
+    {
+        var newPixelPos = mapApartment.localToPixelCoordinates( {x:localX, y: localY} );
+        //console.log("newPixelPos: %o", newPixelPos);
+        if (!CollisionHandling.moveAllowed( newPixelPos[0], newPixelPos[1]))
+            return;
+
+        Controller.localPosition.x = localX;
+        Controller.localPosition.y = localY;
+    
+    },
 	
 	updateKeyInteraction: function()
 	{

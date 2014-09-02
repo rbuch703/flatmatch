@@ -17,8 +17,10 @@ var ApartmentMap = {
 	        var canvasScale = Math.min( ApartmentMap.canvas.width  / ApartmentMap.layoutImage.width, 
 	                                    ApartmentMap.canvas.height / ApartmentMap.layoutImage.height);
 
-            var x = (ev.pageX - ApartmentMap.canvas.offsetLeft) / canvasScale;
-            var y = (ev.pageY - ApartmentMap.canvas.offsetTop) / canvasScale;
+            var pos = ApartmentMap.canvas.getBoundingClientRect();
+
+            var x = (ev.clientX - pos.x)  / canvasScale;
+            var y = (ev.clientY - pos.y)  / canvasScale;
         
             if (ApartmentMap.onClick)
                 ApartmentMap.onClick(x, y);

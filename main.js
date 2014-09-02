@@ -81,10 +81,8 @@ function initEventHandler()
     divLayout.onShow = onApartmentMapShow;
     
 	ApartmentMap.onClick = function(x,y) { 
-	    //console.log("clicked at (%s, %s)", x, y);
         var newPos = mapApartment.pixelToLocalCoordinates([x,y]);
-        Controller.localPosition.x = newPos.x;
-        Controller.localPosition.y = newPos.y;
+        Controller.moveTo( newPos.x, newPos.y);
         scheduleFrameRendering();
     };
     
@@ -132,7 +130,7 @@ function offerMetadataLoaded(offer)
     mapBuildings.onLoaded = function()
     {
         //buildings are occluders in the shadow computation, their presence may thus shift shadows
-        shadows.dirty = true;
+        Shadows.dirty = true;
         scheduleFrameRendering();
     }
 
