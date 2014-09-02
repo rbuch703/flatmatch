@@ -20,6 +20,12 @@ function dist3(a, b)
 }
 
 function len3(a) { return Math.sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2]); }
+function sub3(a, b) { return [a[0] - b[0], a[1] - b[1], a[2] - b[2] ]; }
+function add3(a, b) { return [a[0] + b[0], a[1] + b[1], a[2] + b[2] ]; }
+function mul3scalar(a, s) { return [a[0]*s, a[1]*s, a[2]*s]; }
+function neg3(a) { return [-a[0], -a[1], -a[2]]; }
+
+
 
 function sub2(a, b) { return [a[0] - b[0], a[1] - b[1] ]; }
 function add2(a, b) { return [a[0] + b[0], a[1] + b[1] ]; }

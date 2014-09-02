@@ -134,17 +134,31 @@ Apartment.getTrianglesVertices = function(seg)
      * |/|
      * A-B  */
     var A = seg.pos;
-    /* Scale width and height by 1.0001 to make geometry overlap slightly, in order to to get rid 
-     * of pixel-sized holes between individual triangles caused by numerical inaccuracy.
-     * Note that while these computations are done in JavaScript's 'Number' type (i.e. IEEE-754 double),
-     *  the geometry is uploaded to OpenGl as IEEE-754 float, so the computation has to account for 'float' accuracy.
-     * (or even half-float on mobile devices)
-     */
-    var w = [seg.width[0]*1.001, seg.width[1] * 1.001, seg.width[2]*1.001];
+    
+    var w = [seg.width[0], seg.width[1], seg.width[2]];
     var B = [A[0]+w[0], A[1]+w[1], A[2]+w[2]];
-    var h = [seg.height[0]*1.001, seg.height[1] * 1.001, seg.height[2]*1.001];
+    var h = [seg.height[0], seg.height[1], seg.height[2]];
     var C = [B[0]+h[0], B[1]+h[1], B[2]+h[2]];
     var D = [A[0]+h[0], A[1]+h[1], A[2]+h[2]];
+
+    /* extend rectangle by a small amount to make geometry overlap slightly, in order to get rid 
+     * of pixel-sized holes between individual triangles caused by numerical inaccuracy.
+     * Note that while these computations are done in JavaScript's 'Number' type (i.e. IEEE-754 double),
+     * the geometry is uploaded to OpenGl as IEEE-754 float and processed as half-floats at least on mobile devices.
+     * So the magnitude of the extension has to be based 'float' accuracy.
+     */
+    var widthDir = norm3(seg.width);
+    var heightDir= norm3(seg.height);
+    
+    var ws = mul3scalar(widthDir,  0.001); //width shift by 1mm
+    var hs = mul3scalar(heightDir, 0.001); //height shift by 1mm
+    
+
+    A = [ A[0] - ws[0] - hs[0], A[1] - ws[1] - hs[1], A[2] - ws[2] - hs[2]];
+    B = [ B[0] + ws[0] - hs[0], B[1] + ws[1] - hs[1], B[2] + ws[2] - hs[2]];
+    C = [ C[0] + ws[0] + hs[0], C[1] + ws[1] + hs[1], C[2] + ws[2] + hs[2]];
+    D = [ D[0] - ws[0] + hs[0], D[1] - ws[1] + hs[1], D[2] - ws[2] + hs[2]];
+    
 
     return [A, B, C, A, C, D];
 }
