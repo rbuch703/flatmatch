@@ -151,8 +151,7 @@ function offerMetadataLoaded(offer)
     //addressLog.innerHTML = offer.address;
 
 
-    CollisionHandling.init(offer.layoutId);
-    CollisionHandling.processLayout(offer.layout.layoutImageSize[0], offer.layout.layoutImageSize[1], offer.collisionMap);
+    CollisionHandling.init(offer.layout.layoutImageSize[0], offer.layout.layoutImageSize[1], offer.collisionMap);
 
     VicinityMap.init("mapDiv", offer.lat, offer.lon);
 

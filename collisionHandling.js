@@ -24,74 +24,16 @@ var CollisionHandling = {
 
     map: null,
     
-    init: function(layoutId) {
-        /*CollisionHandling.layoutImage = new Image();
-        CollisionHandling.layoutImage.onload = CollisionHandling.processLayout;
-        CollisionHandling.layoutImage.src = OFFER_REST_BASE_URL + "/get/cleanedLayout/"+ layoutId;*/
-        
-    },
-    
-    /*
-    rasterEdgeInternal : function( start, end)
-    {
-        var pos = [start[0], start[1]];
-        var res = [];
-        
-        var dir = [end[0] - start[0], end[1] - start[1]];
-        
-       
-        res.push( [pos[0], pos[1]] );
-        
-        var dirX = start[0] < end[0] ? 1 : -1;
-        var dirY = start[1] < end[1] ? 1 : -1;
-        
-        while ( pos[0] != end[0] || pos[1] != end[1])
-        {
-            var alphaX = (pos[0] + 0.5 * dirX - start[0])/ dir[0];
-            var alphaY = (pos[1] + 0.5 * dirY - start[1])/ dir[1];
-            
-            if (alphaX < alphaY)
-                pos[0] += dirX;
-            else
-                pos[1] += dirY;
-                
-            res.push( [pos[0], pos[1]] );
-        }
-       
-        return res;
-    },
-    
-    rasterEdge: function(start, end) {
-        var res = [];
-        if (start[0] == end[0]) //vertical edge
-        {
-            var dir = start[1] < end[1] ? 1 : -1;
-            for (var y = start[1]; y <= end[1]; y+= dir)
-                res.push( [start[0], y]);
-            return res;
-        }
-        
-        if (start[1] == end[1]) //horizontal edge
-        {
-            var dir = start[0] < end[0] ? 1 : -1;
-            for (var x = start[0]; x <= end[0]; x+= dir)
-                res.push( [x, start[1] ] );
-            return res;
-        }
-
-        return rasterEdgeInternal(start, end);        
-    },*/
-    
-    processLayout: function(width, height, tmpData) {
+    init: function(width, height, rleCollisionMap) {
         CollisionHandling.width = width;
         CollisionHandling.height =height;
         CollisionHandling.buffer = new ArrayBuffer(width*height);
         CollisionHandling.data = new Uint8Array(CollisionHandling.buffer);
         var i = 0;
         var val = 0;
-        for (var j in tmpData)
+        for (var j in rleCollisionMap)
         {
-            var len = tmpData[j];
+            var len = rleCollisionMap[j];
             while (len > 0)
             {
                 CollisionHandling.data[i] = val;
@@ -163,6 +105,11 @@ var CollisionHandling = {
         
     },
 
+    /* High-level algorithm: The movement from 'start' to 'end' is split in a horizontal and a vertical part. 
+     * Advance based on both parts simultaneously. Whenever there is an obstacle in the horizontal or vertical movement
+     * direction, temporarily set that movement part to zero. If both parts are zero at the same time, return the 
+     * current position as the movement end point. Otherwise walk as long (in movement time, not distance) as you would
+     * if there where no obstacles. Then return your current position as the movement end point. */
    
     adjustMovement: function( start, end)
     {
