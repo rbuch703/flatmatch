@@ -149,9 +149,14 @@ Apartment.getTrianglesVertices = function(seg)
      */
     var widthDir = norm3(seg.width);
     var heightDir= norm3(seg.height);
-    
-    var ws = mul3scalar(widthDir,  0.001); //width shift by 1mm
-    var hs = mul3scalar(heightDir, 0.001); //height shift by 1mm
+ 
+    /* numDigitsBias should be the smallest value that still closes all micro holes. 
+     * The value "9" has been determined experimentally. */
+    var numDigitBias = glu.vertexShaderMediumFloatPrecision - 9;
+    var bias = 1/(1 << numDigitBias);
+
+    var ws = mul3scalar(widthDir,  bias); //width shift by 1mm
+    var hs = mul3scalar(heightDir, bias); //height shift by 1mm
     
 
     A = [ A[0] - ws[0] - hs[0], A[1] - ws[1] - hs[1], A[2] - ws[2] - hs[2]];

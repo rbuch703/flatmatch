@@ -121,6 +121,10 @@ glu.init = function()
      *       1. support a shader precision high enough for shadow mapping
      *       2. render shadow-mapped geometry in real-time.*/
     glu.performShadowMapping = !!glu.depthTextureExtension;
+    
+    var format = gl.getShaderPrecisionFormat(gl.VERTEX_SHADER, gl.MEDIUM_FLOAT);
+    glu.vertexShaderMediumFloatPrecision = format.precision;
+    //console.log("Shader precision: %o", precision);
 }
 
 glu.setMaxAnisotropy = function()

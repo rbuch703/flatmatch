@@ -431,7 +431,7 @@ function renderScene()
 
     var modelViewMatrix = glu.lookAt(Controller.viewAngleYaw, Controller.viewAnglePitch, Controller.localPosition);
     var projectionMatrix = mat4.create();
-    mat4.perspective(projectionMatrix, fieldOfView/180*Math.PI, webGlCanvas.width / webGlCanvas.height, 0.15, 5100.0);
+    mat4.perspective(projectionMatrix, fieldOfView/180*Math.PI, webGlCanvas.width / webGlCanvas.height, 0.10, 5100.0);
 
     gl.enable(gl.CULL_FACE);
 

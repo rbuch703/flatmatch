@@ -123,14 +123,16 @@ var Controller = {
 
         if (!mapApartment)
             return;
-            
-        var newPixelPos = mapApartment.localToPixelCoordinates( {x:Controller.localPosition.x + dx, y: Controller.localPosition.y + dy} );
-        //console.log("newPixelPos: %o", newPixelPos);
-        if (!CollisionHandling.moveAllowed( newPixelPos[0], newPixelPos[1]))
-            return;
 
-        Controller.localPosition.x += dx;
-        Controller.localPosition.y += dy;
+        var oldPixelPos = mapApartment.localToPixelCoordinates( {x:Controller.localPosition.x     , y: Controller.localPosition.y     } );            
+        var newPixelPos = mapApartment.localToPixelCoordinates( {x:Controller.localPosition.x + dx, y: Controller.localPosition.y + dy} );
+        
+        newPixelPos = CollisionHandling.adjustMovement( oldPixelPos, newPixelPos);
+        
+        var newPos = mapApartment.pixelToLocalCoordinates( newPixelPos);
+
+        Controller.localPosition.x = newPos.x;
+        Controller.localPosition.y = newPos.y;
    
     },
     
