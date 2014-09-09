@@ -7,11 +7,26 @@ function getSign(pos, neg)
     return 0;
 }
 
+function toDictionary(queryString)
+{
+    var parts = queryString.split("&");
+    var res = {};
+    for (var i in parts)
+    {
+        var kv = parts[i].split("=");
+        if (kv.length == 2)
+        {
+            res[kv[0]] = parseFloat(kv[1]);
+        }
+    }
+    return res;
+}
+
 
 var Controller = {
 
     position: {"lat": 0, "lng": 0},
-    localPosition : { x:0, y:0, z: 1.5+10 }, //camera position in the local coordinate system ('z' is height)
+    localPosition : { x:0, y:0, z: 1.5 }, //camera position in the local coordinate system ('z' is height)
     viewAngleYaw : 0,
     viewAnglePitch : 0,
 
@@ -45,7 +60,7 @@ var Controller = {
 
     initFromQueryString: function(queryString)
     {
-        var query = Controller.toDictionary(queryString);
+        var query = toDictionary(queryString);
         if (query.lat && query.lng)
         {
             Controller.position = {lat:query.lat, lng:query.lng};
@@ -57,23 +72,6 @@ var Controller = {
             }
         }
     },
-
-    toDictionary: function(queryString)
-    {
-        var parts = queryString.split("&");
-        var res = {};
-        for (var i in parts)
-        {
-            var kv = parts[i].split("=");
-            if (kv.length == 2)
-            {
-                res[kv[0]] = parseFloat(kv[1]);
-            }
-        }
-        return res;
-    },
-    
-    
 
 	onMouseDown: function(e)
 	{
@@ -274,6 +272,9 @@ var Controller = {
 
     getTouchData: function(touches, identifier)
     {
+        if (identifier === null)
+            return null;
+            
         for (var i in touches)
         {
             if (touches[i].identifier == identifier)
@@ -291,31 +292,35 @@ var Controller = {
         Controller.down = touch.identifier;
         Controller.x = touch.clientX;
         Controller.y = touch.clientY;
+        //errorLog.textContent = "Touched down at (" + touch.identifier + ", " + touch.clientX + ", " + touch.clientY + ") - " + Controller.down;
     },
     
     onTouchEnd: function(ev)
     {
-    
         ev.preventDefault();
-        if (Controller.getTouchData(ev.changedTouches, Controller.down))
-        {
-            Controller.down = null;
-        }
+        Controller.down = null;
     },
 
     onTouchMove: function(ev)
     {
     
         ev.preventDefault();
+        //errorLog.textContent = "Touch move";
+        
+        
         var touch = Controller.getTouchData(ev.changedTouches, Controller.down);
-        if (!touch)
+        if (touch === null)
             return;
+
             
         var dx = touch.clientX - Controller.x;
         var dy = touch.clientY - Controller.y;
 
         Controller.x = touch.clientX;
         Controller.y = touch.clientY;
+
+        //errorLog.textContent = "Touch move with down=" + Controller.down + ", delta =(" + dx + ", " + dy + ")";
+
         Controller.move(0,        -dy / 100.0);
         Controller.turn(dx / 5.0, 0       );
 
