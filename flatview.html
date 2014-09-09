@@ -12,7 +12,7 @@
     
     <meta property="fb:admins" content="100001025041261" />
 
-    <link type="text/css" rel="stylesheet" href="styles/global.css" media="screen" />
+    <link type="text/css" rel="stylesheet" href="styles/flatview.css" />
     <link type="text/css" rel="stylesheet" href="styles/leaflet.css" />
     <link type="text/css" rel="stylesheet" href="styles/jquery-ui.css">
 
@@ -55,7 +55,7 @@
     <p>
     This page should work on desktop and laptop computers with most recent browsers (e.g. Firefox, Chrome, Internet Explorer). To date, desktop Safari browsers require <a target="_blank" href="https://discussions.apple.com/thread/3300585?start=0">some tuning</a> to support 3D web graphics.</p>
     <p>
-    For mobile devices (tablets and smartphones), most recent Android-based devices (usually those with Android 4.3 and newer) should support 3D web graphics. Apple's iPhone and iPad series of devices currently does not.
+    For mobile devices (tablets and smartphones), most recent Android-based devices (usually those with Android 4.3 and newer) should support 3D web graphics. Apple's iPhone and iPad series of devices currently do not.
     </p>
     Here's a screenshot of what you are missing:<br>
     <img id="screenshotImg">
@@ -64,26 +64,29 @@
 
 
 <!--<div style="width:100%; height:100%"> -->
-<div id="leftNavDiv" style="position:absolute; left:0px; width:30%;top:20px;bottom:20px;overflow:auto">
-    <div style="padding-left:20px;padding-right: 20px; ">
+<div id="navDiv" style="">
+    <div id="divNavContainer" style="padding-left:20px;padding-right: 20px; ">
 
-        <h3>Wohnungsinformationen</h3>
+        <h3 id="hBaseInfo">Wohnungsinformationen</h3>
+        <div id="divBaseInfo">
         <table>
             <tr><td style="font-style:italic">Anschrift:</td><td id="lblAddress"></td></tr>
             <tr><td style="font-style:italic">Anzahl Zimmer:</td><td id="lblRooms"></td></tr>
             <tr><td style="font-style:italic">Größe:</td><td id="lblSize"></td></tr>
             <tr><td style="font-style:italic">Etage:</td><td id="lblLevel"></td></tr>
-            <tr><td style="font-style:italic">Kaltmiete+Nebenkosten:</td><td id="lblRent"></td></tr>
-            <tr><td style="font-style:italic">weitere Informationen</td><td id="lblDetails"></td></tr>
-            
+            <tr><td style="font-style:italic">Kaltmiete+<br>Nebenkosten:</td><td id="lblRent"></td></tr>
+            <tr><td style="font-style:italic">mehr</td><td id="lblDetails"></td></tr>
         </table>
-        <br>
-        <h3>Weitere Informationen</h3>
+        </div>
+
+        <h3 id="hFurtherInfo" style="padding-top:20px">Weitere Informationen</h3>
         <div style="padding-bottom:20px">
             <div style="border-bottom: 1px solid #777"> </div>
+            <a href="#" id="aBaseInfo" class="tabHeader">Info</a>
             <a href="#" id="aLayout" class="tabHeader tabHeaderSelected">Grundriss</a>
             <a href="#" id="aVicinity" class="tabHeader">Umgebung</a>
             <a href="#" id="aSunPos" class="tabHeader">Sonnenstand</a>
+            <a href="#" id="aDisclaimer" class="tabHeader">Disclaimer</a>
         </div>
 
         <div id="divSunPos" style="display:none">
@@ -109,10 +112,10 @@
 </div>
 
 
-<div id="contentDiv" style="position:absolute; width:70%; right:0px;top:0px;bottom:0px">
+<div id="contentDiv" >
     <!-- <div id="nav" style="background-color:#EEE; position:fixed; width:75%; top:50px; bottom:0px; right: 0px; overflow-y:scroll">-->
 		<canvas id="webGlCanvas" style="width:100%; background:black" ></canvas>
-        <div style="font-size:80%; font-style:italic">
+        <div id="divDisclaimer" style="font-size:80%; font-style:italic">
 The map and building geometry are &copy;OpenStreetMap contributors and are <a href="http://www.openstreetmap.org/copyright">licensed</a> under the Creative Commons BY-SA (map) and Open Database License (buildings) licenses.<br> For administrative questions on this page please contact the <a href="mailto:rbuch703@gmail.com">webmaster</a>.
         </div>
         

@@ -16,6 +16,8 @@ var rowId;
 var OFFER_REST_BASE_URL = "http://rbuch703.de:1080/rest_v2";
 //var OFFER_REST_BASE_URL = "http://localhost:1080/rest_v2"
 
+var mqSaveSpace = window.matchMedia( "(max-height: 799px), (orientation: portrait)" );
+
 
 //pasted from controller.js; FIXME: find better common place
 function toDictionary (queryString)
@@ -73,9 +75,11 @@ function initEventHandler()
     document.addEventListener("keyup",   function(ev) {Controller.onKeyUp(ev);},  false);
 	document.body.onresize = onResize;
 
-    aLayout.addEventListener(  "click", function(ev) { ev.preventDefault(); onTabClicked(aLayout,   divLayout);} );
-    aSunPos.addEventListener(  "click", function(ev) { ev.preventDefault(); onTabClicked(aSunPos,   divSunPos);} );
-    aVicinity.addEventListener("click", function(ev) { ev.preventDefault(); onTabClicked(aVicinity, divVicinity);} );
+    aLayout.addEventListener(  "click",  function(ev) { ev.preventDefault(); onTabClicked(aLayout,    divLayout);} );
+    aSunPos.addEventListener(  "click",  function(ev) { ev.preventDefault(); onTabClicked(aSunPos,    divSunPos);} );
+    aVicinity.addEventListener("click",  function(ev) { ev.preventDefault(); onTabClicked(aVicinity,  divVicinity);} );
+    aDisclaimer.addEventListener("click",function(ev) { ev.preventDefault(); onTabClicked(aDisclaimer,divDisclaimer);} );
+    aBaseInfo.addEventListener("click",  function(ev) { ev.preventDefault(); onTabClicked(aBaseInfo,  divBaseInfo);} );
 
     divVicinity.onShow =  onVicinityMapShow;
     divLayout.onShow = onApartmentMapShow;
@@ -167,6 +171,12 @@ function onTabClicked(anchor, tab)
 {
     var anchors = [aLayout, aSunPos, aVicinity];
     var tabs =    [divLayout, divSunPos, divVicinity];
+    
+    if (mqSaveSpace.matches)
+    {
+        anchors = anchors.concat([aBaseInfo, aDisclaimer]);
+        tabs = tabs.concat([divBaseInfo, divDisclaimer]);
+    }
     
     for (var i in anchors)
         anchors[i].className = "tabHeader";
@@ -316,9 +326,29 @@ function init()
     }
     req.send();
 
+    mqSaveSpace.addListener(onLayoutChange);
+    onLayoutChange();
 }   
 
-//var res;
+function onLayoutChange()
+{
+    if (mqSaveSpace.matches)
+    {
+        aDisclaimer.style.display = "initial";
+        aBaseInfo.style.display = "initial";
+        divNavContainer.insertBefore(divBaseInfo, divSunPos);
+        divNavContainer.insertBefore(divDisclaimer, divSunPos);
+    } else
+    {
+        aDisclaimer.style.display = "none";
+        aBaseInfo.style.display = "none";
+        divNavContainer.insertBefore(divBaseInfo, hFurtherInfo);
+        contentDiv.appendChild(divDisclaimer);
+        divBaseInfo.style.display = "initial";
+        divDisclaimer.style.display= "initial";
+    }
+    onTabClicked( aLayout, divLayout);
+}
 
 
 var frameRenderingScheduled = false;
@@ -404,9 +434,12 @@ function onResize()
      *   - Canvas.height sets the logical size of the drawing buffer is pixels (its content is later scaled to fit the object on screen)
      *   - Canvas.clientHeight is the read-only value of the consequence of Canvas.style.height in pixels (even if style.height is given in percent, etc.)
      */	    
-    webGlCanvas.style.height = webGlCanvas.clientWidth / 16 * 9 + "px";
-    webGlCanvas.height = webGlCanvas.clientHeight / 2;
-    webGlCanvas.width  = webGlCanvas.clientWidth / 2;
+    if (window.matchMedia( "(orientation: landscape)" ).matches )
+        webGlCanvas.style.height = webGlCanvas.clientWidth / 16 * 9 + "px";
+    else 
+        webGlCanvas.style.height = "100%";
+    webGlCanvas.height = webGlCanvas.clientHeight;// / 2;
+    webGlCanvas.width  = webGlCanvas.clientWidth;// / 2;
 
 
     ApartmentMap.resize();

@@ -3,6 +3,7 @@
 java -jar ~/Downloads/ClosureCompiler/compiler.jar --js_output_file combined.js -O SIMPLE \
     apartment.js    \
     apartmentMap.js \
+    collisionHandling.js \
     buildings.js    \
     controller.js   \
     gl-matrix.js    \
