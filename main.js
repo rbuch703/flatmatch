@@ -463,18 +463,36 @@ function renderScene()
 
     var modelViewMatrix = glu.lookAt(Controller.viewAngleYaw, Controller.viewAnglePitch, Controller.localPosition);
     var projectionMatrix = mat4.create();
-    mat4.perspective(projectionMatrix, fieldOfView/180*Math.PI, webGlCanvas.width / webGlCanvas.height, 0.10, 5100.0);
+    mat4.perspective(projectionMatrix, fieldOfView/180*Math.PI, webGlCanvas.width / webGlCanvas.height, 2, 5100.0);
 
     gl.enable(gl.CULL_FACE);
+
+    var renderItems = [mapPlane, mapBuildings, mapSkyDome, mapSun];
+    for (var i in renderItems)
+        if (renderItems[i])
+            renderItems[i].render(modelViewMatrix, projectionMatrix, Shadows.shadowMvpMatrix);
 
     /*note: mapApartment has to be rendered last, as it clears the z-buffer to work
      *      around some artifacts caused by building geometry intersecting with apartment geometry.
      *      Rendering anything afterwards will likely overdraw
-     *      portions of the image even though they are close to the camera */
-    var renderItems = [mapPlane, mapBuildings, mapSkyDome, mapSun, mapApartment];
-    for (var i in renderItems)
-        if (renderItems[i])
-            renderItems[i].render(modelViewMatrix, projectionMatrix, Shadows.shadowMvpMatrix);
+     *      portions of the image even though they are closer to the camera */
+     
+    /* note2: We use a different set of near/far planes for the apartment than for the rest of the scene, because we
+     *        need a different depth range: The apartment has a diameter of less than 100 meters (= far plane), but the 
+     *        user may get as close as a few centimeters to any given wall (= near plane). The user never gets any closer
+     *        than about 2m to any other scene object (sun, sky, map plane, other buildings), but these need to be rendered
+     *        even if as far as 5km away. Using a shared z-range for all objects would lead to numerical inaccuracies for 
+     *        far away objects, appearing as drawn edges not matching the seam between object faces, etc.
+     *        Changing near/far planes during rendering corrupts the z-Buffer (as the stored values are relative to the old
+     *        near/far planes) and would normally corrupt the final image. But the render code for the apartment clear the 
+     *        z-buffer anyway, and so nicely gets around that problem.
+    */
+    if (mapApartment)
+    {
+        var projectionMatrix = mat4.create();
+        mat4.perspective(projectionMatrix, fieldOfView/180*Math.PI, webGlCanvas.width / webGlCanvas.height, 0.01, 100.0);
+        mapApartment.render(modelViewMatrix, projectionMatrix, Shadows.shadowMvpMatrix);
+    }
 	//gl.flush();
 }
 
