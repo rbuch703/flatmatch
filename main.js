@@ -395,15 +395,16 @@ function executeFrameRendering()
 function initGl()
 {
     //create context
-	gl = webGlCanvas.getContext("webgl") || webGlCanvas.getContext("experimental-webgl");
+	gl = null;//webGlCanvas.getContext("webgl") || webGlCanvas.getContext("experimental-webgl");
 	if(!gl)
 	{
 	    //remove controls that depend on webGL, and show error messages
         glErrorDiv.style.display = "inherit";
-        leftNavDiv.style.display = "none";
-        screenshotImg.src="images/screenshot.png"
+        navDiv.style.display = "none";
+        divDisclaimer.style.display = "none";
+
+        document.body.removeChild(contentDiv);
         gl = null;
-        contentDiv.removeChild(webGlCanvas);
 		return;
 	}
 	
