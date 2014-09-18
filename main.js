@@ -13,7 +13,7 @@ var gl;
 var fieldOfView = 90/16*9;
 var layoutId;// = 158;
 var rowId;
-var OFFER_REST_BASE_URL = "http://rbuch703.de:1080/rest_v2";
+var OFFER_REST_BASE_URL = "http://rbuch703.de/rest";
 //var OFFER_REST_BASE_URL = "http://localhost:1080/rest_v2"
 
 var mqSaveSpace = window.matchMedia( "(max-height: 799px), (orientation: portrait)" );
@@ -395,7 +395,7 @@ function executeFrameRendering()
 function initGl()
 {
     //create context
-	gl = null;//webGlCanvas.getContext("webgl") || webGlCanvas.getContext("experimental-webgl");
+	gl = webGlCanvas.getContext("webgl") || webGlCanvas.getContext("experimental-webgl");
 	if(!gl)
 	{
 	    //remove controls that depend on webGL, and show error messages
