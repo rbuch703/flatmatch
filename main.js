@@ -127,9 +127,6 @@ function offerMetadataLoaded(offer)
     //initialize mapSun date/time
     onSunPositionChanged( $( "#slider-day" ).slider( "value"), $( "#slider-time" ).slider( "value"));
 
-    mapPlane = new MapLayer(gl, Controller.position);
-    mapPlane.onProgress= scheduleFrameRendering;
-
     mapBuildings = new Buildings(gl, Controller.position);
     mapBuildings.onLoaded = function()
     {
@@ -143,6 +140,10 @@ function offerMetadataLoaded(offer)
     Controller.localPosition.x = mapApartment.startingPos[0];
     Controller.localPosition.y = mapApartment.startingPos[1];
     Controller.localPosition.z =  apartmentFloorHeight + 1.6; 
+
+    //needs to be created after Controller.localPosition.z is set, as this height is relevant to determine the necessary map detail
+    mapPlane = new MapLayer();
+    mapPlane.onProgress= scheduleFrameRendering;
 
     
     lblAddress.innerHTML = offer.address;

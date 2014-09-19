@@ -3,7 +3,7 @@
 /**
  * @constructor
  */
-function MapLayer(gl, position) {
+function MapLayer() {
     
     this.createTileHierarchy(  );
 
