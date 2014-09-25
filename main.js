@@ -80,6 +80,7 @@ function initEventHandler()
     aVicinity.addEventListener("click",  function(ev) { ev.preventDefault(); onTabClicked(aVicinity,  divVicinity);} );
     aDisclaimer.addEventListener("click",function(ev) { ev.preventDefault(); onTabClicked(aDisclaimer,divDisclaimer);} );
     aBaseInfo.addEventListener("click",  function(ev) { ev.preventDefault(); onTabClicked(aBaseInfo,  divBaseInfo);} );
+    aUsageNotes.addEventListener("click",  function(ev) { ev.preventDefault(); onTabClicked(aUsageNotes,  divUsageNotes);} );
 
     divVicinity.onShow =  onVicinityMapShow;
     divLayout.onShow = onApartmentMapShow;
@@ -170,8 +171,8 @@ function offerMetadataLoaded(offer)
 
 function onTabClicked(anchor, tab)
 {
-    var anchors = [aLayout, aSunPos, aVicinity];
-    var tabs =    [divLayout, divSunPos, divVicinity];
+    var anchors = [aLayout, aSunPos, aVicinity, aUsageNotes];
+    var tabs =    [divLayout, divSunPos, divVicinity, divUsageNotes];
     
     if (mqSaveSpace.matches)
     {
@@ -493,7 +494,7 @@ function renderScene()
     {
         var projectionMatrix = mat4.create();
         mat4.perspective(projectionMatrix, fieldOfView/180*Math.PI, webGlCanvas.width / webGlCanvas.height, 0.01, 100.0);
-        mapApartment.render(modelViewMatrix, projectionMatrix, Shadows.shadowMvpMatrix);
+        //mapApartment.render(modelViewMatrix, projectionMatrix, Shadows.shadowMvpMatrix);
     }
 	//gl.flush();
 }
