@@ -12,91 +12,44 @@ function Buildings(gl, position)
         return;
 
     this.mapCenter = position;
+    this.geometry = [];
+    this.numTilesLoaded = 0;
 
     var earthCircumference = 2 * Math.PI * (6378.1 * 1000);
     var physicalTileLength = earthCircumference* Math.cos(position.lat/180*Math.PI) / Math.pow(2, /*zoom=*/19);
 
-/*
-    var numTilesPer500m = 500 / physicalTileLength * 2; //HACK: increase radius to 1km
 
-    var x = long2tile(position.lng,19);
-    var y = lat2tile( position.lat,19);
+    //the building geometry tiles are created only for zoom level 14
+    var x = long2tile(position.lng,14);
+    var y = lat2tile( position.lat,14);
+
+    var listX = x % 1 > 0.5 ? [0, 1] : [-1, 0];
+    var listY = y % 1 > 0.5 ? [0, 1] : [-1, 0];
+   
+    x = Math.floor(x);
+    y = Math.floor(y);
+
+    var tiles = [];
+    for (var i in listX)
+        for (var j in listY)
+            tiles.push( {x: x+listX[i], y: y+listY[j]} );
     
     
-    var lng_min = tile2long(x - numTilesPer500m, 19);
-    var lng_max = tile2long(x + numTilesPer500m, 19);
-    
-    var lat_min = tile2lat( y + numTilesPer500m, 19);
-    var lat_max = tile2lat( y - numTilesPer500m, 19);
-*/
-    
-    
-    var bldgs = this;
-    var oReq = new XMLHttpRequest();
-    oReq.onload = function() { bldgs.onDataLoaded(this); }
-    oReq.open("get", "geometry.json", true);
-    oReq.send();
+    for (i in tiles)
+    {        
+        var bldgs = this;
+        var oReq = new XMLHttpRequest();
+        oReq.onload = function() { bldgs.onDataLoaded(this); }
+        var url = "geoTiles/"+tiles[i].x+"/"+tiles[i].y+".json"
+        //console.log("requesting %o", url);
+        oReq.open("get", url, true);
+        oReq.send();
+    }
     
 }    
 
 function vec(a) { return [a.dx, a.dy];}
 
-/*
-function simplifyOutline(outline)
-{
-    var nodes = outline.nodes;
-    if (nodes.length < 3) return;
-
-    var res = [];
-    res[0] = nodes[0];
-    var prev = nodes[0];
-    var curr = nodes[1];
-    for (var i = 2; i < nodes.length; i++)
-    {
-        var next = nodes[i];
-
-        var v1 = norm2(sub2(vec(next), vec(curr)));   //v1 = norm( next - curr);
-        var v2 = norm2(sub2(vec(prev), vec(curr)));   //v2 = norm( prev - curr);
-        var cosArc = dot2(v1, v2);
-        
-        if (Math.abs(cosArc) > 0.999)    //almost colinear (deviation < 2.6°) --> ignore 'curr' vertex
-        {
-            curr = next;
-            continue;
-        }
-        
-        res.push(curr);
-        prev = curr;
-        curr = next;
-    } 
-    res.push(nodes[nodes.length-1]);
-
-
-    // Handle edge case: vertex 0 lies on a colinear line segment and should be removed
-    // N.B.: in OSM data, the first and last vertex of an area are identical.
-    //       thus, the following algorithm skips the last vertex in the colinearity check
-    //       and in case of colinearity removes the first *and* last vertex ( and 
-    //       replicates the new first vertex as the new last one).
-
-    
-    prev = res[res.length-2];
-    
-    curr = res[0];
-    next = res[1];
-    
-    var v1 = norm2(sub2(vec(next), vec(curr)));   //v1 = norm( next - curr);
-    var v2 = norm2(sub2(vec(prev), vec(curr)));   //v2 = norm( prev - curr);
-    var cosArc = dot2(v1, v2);
-    
-    if (Math.abs(cosArc) > 0.999)    //almost colinear (deviation < 2.6°) --> ignore 'curr' vertex
-    {
-        res = res.slice(1, res.length-1);
-        res.push(res[0]);
-    }    
-
-    outline.nodes = res;
-}
-*/
 
 /** standard polygon orientation test: 
   * 1. find a extreme vertex, e.g. the leftmost one
@@ -128,18 +81,23 @@ function isClockwise(outline)
 
 
 Buildings.prototype.onDataLoaded = function(response) {
-    var geometry = JSON.parse(response.responseText);
+    var geometry =  [].push.apply(this.geometry,JSON.parse(response.responseText));
+	this.numTilesLoaded += 1;
 	
-    //console.log(geometry);
+	if (this.numTilesLoaded != 4)
+	    return;
+	
+    //console.log(this.geometry);
+    
     var lat = this.mapCenter.lat;
     var cosLat = Math.cos( lat/180 * Math.PI );
     
     var lng = this.mapCenter.lng;
     var earthCircumference = 2 * Math.PI * (6378.1 * 1000); // [m]
 
-    for (var i in geometry)
+    for (var i in this.geometry)
     {    
-        var building = geometry[i];
+        var building = this.geometry[i];
         
         var vertices = [];
         //convert vertices from lat/lng to local coordinate system (in meters)
@@ -165,7 +123,9 @@ Buildings.prototype.onDataLoaded = function(response) {
             building.faces[j] = vertices[building.faces[j]];
     }
     //console.log(geometry);            
-    this.buildGlGeometry(geometry);
+    this.buildGlGeometry(this.geometry);
+
+    delete this.geometry;
     
     if (this.onLoaded)
         this.onLoaded();

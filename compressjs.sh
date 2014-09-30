@@ -4,7 +4,7 @@ java -jar ~/Downloads/ClosureCompiler/compiler.jar --js_output_file combined.js 
     apartment.js    \
     apartmentMap.js \
     collisionHandling.js \
-    buildings.js    \
+    buildingsStatic.js    \
     controller.js   \
     gl-matrix.js    \
     glu.js          \
@@ -13,7 +13,6 @@ java -jar ~/Downloads/ClosureCompiler/compiler.jar --js_output_file combined.js 
     main.js         \
     mapLayer.js     \
     math.js         \
-    poly2tri.js     \
     shaders.js      \
     shadows.js      \
     skydome.js      \

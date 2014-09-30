@@ -376,7 +376,7 @@ function executeFrameRendering()
     
     // If at least one key is still pressed, schedule rendering of the next frame right away:
     // A pressed key will potentially change the scene and require a re-rendering
-    if (Controller.keysStillPressed())   
+    if (Controller.keysStillPressed())
         scheduleFrameRendering();
 
     if (Controller.keysStillPressed())
@@ -494,7 +494,7 @@ function renderScene()
     {
         var projectionMatrix = mat4.create();
         mat4.perspective(projectionMatrix, fieldOfView/180*Math.PI, webGlCanvas.width / webGlCanvas.height, 0.01, 100.0);
-        //mapApartment.render(modelViewMatrix, projectionMatrix, Shadows.shadowMvpMatrix);
+        mapApartment.render(modelViewMatrix, projectionMatrix, Shadows.shadowMvpMatrix);
     }
 	//gl.flush();
 }
