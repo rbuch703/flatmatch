@@ -40,22 +40,24 @@ function Buildings(gl, position)
         var bldgs = this;
         var oReq = new XMLHttpRequest();
         oReq.onload = function() { bldgs.onDataLoaded(this); }
-        var url = "geoTiles/"+tiles[i].x+"/"+tiles[i].y+".json"
-        //console.log("requesting %o", url);
+        //var url = "http://rbuch703.de/tiles/geo/"+tiles[i].x+"/"+tiles[i].y+".json"
+        var url = "./geoTiles/"+tiles[i].x+"/"+tiles[i].y+".json"
+//        console.log("requesting %s", url);
+        oReq.overrideMimeType("text/plain");    //necessary to stop Firefox from logging a spurious error
         oReq.open("get", url, true);
         oReq.send();
     }
     
 }    
 
-function vec(a) { return [a.dx, a.dy];}
+//function vec(a) { return [a.dx, a.dy];}
 
 
 /** standard polygon orientation test: 
   * 1. find a extreme vertex, e.g. the leftmost one
   * 2. determine the sign of opening angle between the adjacent edges (= the orientation)
   **/
-function isClockwise(outline)
+/*function isClockwise(outline)
 {
     var nodes = outline.nodes;
     if (nodes.length < 3) return;
@@ -77,7 +79,7 @@ function isClockwise(outline)
     var det = (B.dx * C.dy + A.dx * B.dy + A.dy * C.dx) - (A.dy * B.dx + B.dy * C.dx + A.dx * C.dy);
     
     return det > 0;
-}
+}*/
 
 
 Buildings.prototype.onDataLoaded = function(response) {
@@ -94,10 +96,11 @@ Buildings.prototype.onDataLoaded = function(response) {
     
     var lng = this.mapCenter.lng;
     var earthCircumference = 2 * Math.PI * (6378.1 * 1000); // [m]
-
+    
     for (var i in this.geometry)
     {    
         var building = this.geometry[i];
+        var minHeight = building.minHeightInMeters | 0;
         
         var vertices = [];
         //convert vertices from lat/lng to local coordinate system (in meters)
@@ -112,6 +115,7 @@ Buildings.prototype.onDataLoaded = function(response) {
             vertices.push([x, -y, v[2]]);
         }
         
+        // replace edge vertex IDs by actual edge vertices
         for (var j in building.edges)
         {
             var edge = building.edges[j];
@@ -119,8 +123,42 @@ Buildings.prototype.onDataLoaded = function(response) {
                 edge[j] = vertices[edge[j]];
         }
 
+        // replace face vertex IDs by actual face vertices
         for (var j in building.faces)
             building.faces[j] = vertices[building.faces[j]];
+            
+        // process outlines: replace outline vertex IDs by actual vertices; 
+        // construct drawable edges and faces form outlines
+        for (var j in building.outlines)
+        {
+            var outline = building.outlines[j];
+            var upper = [];
+            var lower = [];
+            for (var k in outline)
+            {
+                outline[k] = vertices[outline[k]];
+                var vHigh = outline[k];
+                var vLow  = [vHigh[0], vHigh[1], minHeight];
+                upper.push( vHigh );
+                lower.push( vLow );
+                building.edges.push([vLow, vHigh]);
+            }
+            
+            for (var k = 0; k < outline.length-1; k++)
+            {
+                var v4 = outline[k];
+                var v3 = outline[k+1];
+                var v2 = [v3[0], v3[1], minHeight];
+                var v1 = [v4[0], v4[1], minHeight];
+                building.faces.push(v1, v2, v3);
+                building.faces.push(v1, v3, v4);
+            }
+            building.edges.push(upper);
+            building.edges.push(lower);
+            //console.log("%o", building);
+        }
+
+            
     }
     //console.log(geometry);            
     this.buildGlGeometry(this.geometry);
@@ -162,32 +200,6 @@ function getLengthInMeters(len_str) {
 
     return val;
 }*/
-
-/* converts 'buildings' global coordinates (lat/lon) to local distances (in m) from mapCenter*/
-/*function convertToLocalCoordinates(buildings,  mapCenter)
-{
-    var y0 = lat2tile(mapCenter.lat, 19);
-    var x0 = long2tile(mapCenter.lng, 19);
-
-    var earthCircumference = 2 * Math.PI * (6378.1 * 1000);
-    var physicalTileLength = earthCircumference* Math.cos(mapCenter.lat/180*Math.PI) / Math.pow(2, 19);
-
-    for (var i in buildings)
-    {
-        var bld = buildings[i];
-        for (var j = 0; j < bld.nodes.length; j++)
-        {
-            var y = lat2tile(bld.nodes[j].lat, 19);
-            var x = long2tile(bld.nodes[j].lon, 19);
-            
-            bld.nodes[j].dx = (x - x0) * physicalTileLength;
-            bld.nodes[j].dy = (y - y0) * physicalTileLength;
-        }
-    }
-    return buildings;
-
-}*/
-
 
 Buildings.prototype.buildGlGeometry = function(geometry) {
     if (!gl)
@@ -257,7 +269,7 @@ Buildings.prototype.renderDepth = function(modelViewMatrix, projectionMatrix) {
     //HACK: A building casts the same shadow regardless of whether its front of back faces are used in the shadow computation.
     //      The only exception is the building the camera is located in: using front faces would prevent light to be casted on
     //      anything inside the building walls, i.e. no light would fall on anything inside the apartment (since its windows
-    //      have to corresponding holes in the buiding geometry. Using only the front faces effectively ignores just the
+    //      have no corresponding holes in the building geometry. Using only the front faces effectively ignores just the
     //      building the camera is in for the shadow computation, which gives the desired effect to shading the apartment
     gl.cullFace(gl.FRONT);
 

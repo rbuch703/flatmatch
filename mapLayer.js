@@ -97,14 +97,14 @@ MapLayer.prototype.createTileHierarchy = function()
     var height = Controller.localPosition.z;
     var earthCircumference = 2 * Math.PI * (6378.1 * 1000);
     var physicalTileLength = earthCircumference* Math.cos(Controller.position.lat/180*Math.PI) / Math.pow(2, 17);
-    var pixelLength = physicalTileLength / 256;
+    var pixelLength = physicalTileLength / 512;
     
     var maxDistance = {};
     
     for (var level = 0; level < 25; level++)
     {
         var physicalTileLength = earthCircumference* Math.cos(Controller.position.lat/180*Math.PI) / Math.pow(2, level);
-        var pixelLength = physicalTileLength / 256;
+        var pixelLength = physicalTileLength / 512;
         maxDistance[level] = getRadius(pixelLength, height);
     }
 
