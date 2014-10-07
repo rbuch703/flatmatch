@@ -15,6 +15,27 @@ function Buildings(gl, position)
     this.geometry = [];
     this.numTilesLoaded = 0;
 
+    //var l = Math.floor((Math.random() * 256));
+    //var initialColor = new Uint8Array([l, l, l]);
+    this.windowTexture = glu.createTextureFromBytes( new Uint8Array([255, 255, 0]) );
+    gl.bindTexture(gl.TEXTURE_2D, this.windowTexture);
+    //to allow tiling of windows
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+
+    var image = new Image();
+    var bldgs = this;
+    image.onload = function() 
+    { 
+        glu.updateTexture( bldgs.windowTexture, image);
+        
+        if (Controller.onRequestFrameRender)
+            Controller.onRequestFrameRender();
+    };
+    
+    image.src = "images/window.png";
+
+
     var earthCircumference = 2 * Math.PI * (6378.1 * 1000);
     var physicalTileLength = earthCircumference* Math.cos(position.lat/180*Math.PI) / Math.pow(2, /*zoom=*/19);
 
@@ -50,38 +71,6 @@ function Buildings(gl, position)
     
 }    
 
-//function vec(a) { return [a.dx, a.dy];}
-
-
-/** standard polygon orientation test: 
-  * 1. find a extreme vertex, e.g. the leftmost one
-  * 2. determine the sign of opening angle between the adjacent edges (= the orientation)
-  **/
-/*function isClockwise(outline)
-{
-    var nodes = outline.nodes;
-    if (nodes.length < 3) return;
-
-    var minXIdx = 0;
-
-    for (var i = 0; i < nodes.length; i++)
-        if (nodes[i].dx < nodes[minXIdx].dx)
-            minXIdx = i;
-            
-    //note: first and last vertex of a polygon are identical
-    var predIdx = (minXIdx == 0) ? nodes.length - 2 : minXIdx - 1;
-    var succIdx = (minXIdx == nodes.length-1) ? 1 : minXIdx + 1;
-    
-    var A = nodes[predIdx];
-    var B = nodes[minXIdx];
-    var C = nodes[succIdx];
-    
-    var det = (B.dx * C.dy + A.dx * B.dy + A.dy * C.dx) - (A.dy * B.dx + B.dy * C.dx + A.dx * C.dy);
-    
-    return det > 0;
-}*/
-
-
 Buildings.prototype.onDataLoaded = function(response) {
     var geometry =  [].push.apply(this.geometry,JSON.parse(response.responseText));
 	this.numTilesLoaded += 1;
@@ -101,6 +90,7 @@ Buildings.prototype.onDataLoaded = function(response) {
     {    
         var building = this.geometry[i];
         var minHeight = building.minHeightInMeters | 0;
+        //var building.heightInMeters = building.vertices[0][2] - minHeight; 
         
         var vertices = [];
         //convert vertices from lat/lng to local coordinate system (in meters)
@@ -128,7 +118,7 @@ Buildings.prototype.onDataLoaded = function(response) {
             building.faces[j] = vertices[building.faces[j]];
             
         // process outlines: replace outline vertex IDs by actual vertices; 
-        // construct drawable edges and faces form outlines
+        // construct drawable edges from outlines
         for (var j in building.outlines)
         {
             var outline = building.outlines[j];
@@ -144,15 +134,6 @@ Buildings.prototype.onDataLoaded = function(response) {
                 building.edges.push([vLow, vHigh]);
             }
             
-            for (var k = 0; k < outline.length-1; k++)
-            {
-                var v4 = outline[k];
-                var v3 = outline[k+1];
-                var v2 = [v3[0], v3[1], minHeight];
-                var v1 = [v4[0], v4[1], minHeight];
-                building.faces.push(v1, v2, v3);
-                building.faces.push(v1, v3, v4);
-            }
             building.edges.push(upper);
             building.edges.push(lower);
             //console.log("%o", building);
@@ -171,35 +152,20 @@ Buildings.prototype.onDataLoaded = function(response) {
     //console.log("Buildings: %o", this.buildings);
 }
 
-/*
-function getLengthInMeters(len_str) {
-    // matches a float (including optional fractional part and optional 
-    // exponent) followed by an optional unit of measurement
-    var re = /^((\+|-)?\d+(\.\d+)?((e|E)-?\d+)?)\s*([a-zA-Z]*)?$/;
-    var m = re.exec(len_str);
-    if (!m)
-    {
-        console.log("cannot parse length string '" + len_str + "'");
-        //fallback: if the string is not valid as a whole, let 
-        //          JavaScript itself parse as much of it as possible
-        return parseFloat(len_str); 
-    }
+Buildings.colorStringToRgbTriplet = function(col)
+{
+    //input format: "#123456"
+    var r = parseInt("" + col[1] + col[2], 16)/255;
+    var g = parseInt("" + col[3] + col[4], 16)/255;
+    var b = parseInt("" + col[5] + col[6], 16)/255;
     
-    var val = parseFloat(m[1]);
-    var unit= m[6];
-
-    if (! unit) //no explicit unit --> unit is meters (OSM default)
-        return val;
     
-    if (unit == "m") //already in meters -> no conversion necessary
-        return val; 
-
-    console.log("unit is '" + unit + "'");
-    if (console.warn)
-        console.warn("no unit conversion performed");
-
-    return val;
-}*/
+    var l = 1.5;//(0.2126*r + 0.7152*g + 0.0722*b) + 0.5;
+    return [0.3*r + 0.7*l, 0.3*g+0.7*l, 0.3*b+0.7*l];
+    
+    //return [r, g, b];
+    
+}
 
 Buildings.prototype.buildGlGeometry = function(geometry) {
     if (!gl)
@@ -209,6 +175,7 @@ Buildings.prototype.buildGlGeometry = function(geometry) {
     this.vertices= [];
     this.texCoords=[];
     this.normals  =[];
+    this.vertexColors = [];
     this.edgeVertices = [];
     
     var vertexArrays = [];
@@ -217,6 +184,20 @@ Buildings.prototype.buildGlGeometry = function(geometry) {
     for (var i in geometry)
     {
         var building = geometry[i];
+        
+        var wallColor = Buildings.colorStringToRgbTriplet( building.wallColor);
+        var faceWallColors = [].concat(wallColor, wallColor, wallColor);
+
+        var roofColor = Buildings.colorStringToRgbTriplet( building.roofColor);
+        var faceRoofColors = [].concat(roofColor, roofColor, roofColor);    // three vertices per face --> triplicate vertex color
+
+        var minHeight =   building.minHeightInMeters;
+        var height    =   building.heightWithoutRoofInMeters;
+        var numLevels =   (height / 3) | 0;
+        
+        //console.log(wallColor);
+        
+        //add building edges to global 'edgeVertices' VBO
         for (var j in building.edges)
         {
             var edge = building.edges[j];
@@ -227,6 +208,8 @@ Buildings.prototype.buildGlGeometry = function(geometry) {
                 [].push.apply(this.edgeVertices, edgeVertices);
             }
         }
+
+        //add building (or rather roof) edges to global vertices, vertexColors, texCoords and normals VBO
         
         for (var j = 0; j+2 < building.faces.length; j+=3)
         {
@@ -238,23 +221,61 @@ Buildings.prototype.buildGlGeometry = function(geometry) {
             
             //flatten array of 3-element-arrays to a single array
             var coords = [].concat(v1, v2, v3);
-            this.vertices.push.apply(this.vertices, coords);
+            [].push.apply(this.vertices, coords);
             
-            var tc = [0,0,1,  0,0,1,  0,0,1];
-            this.texCoords.push.apply( this.texCoords, tc); //this 'hack' is way faster than concat()
+            var tc = [0,0,  0,0,  0,0];
+            [].push.apply( this.texCoords, tc); //this 'hack' is way faster than concat()
             
             var norms = [].concat(N,N,N);
-            this.normals.push.apply( this.normals, norms);
+            [].push.apply( this.normals, norms);
             
+            // only the building roof is stored as explicit geometry in the JSON geometry response (so use roofColor here)
+            // The walls are only stored as outlines, from which the actual wall geometry is generated below.
+            [].push.apply( this.vertexColors, faceRoofColors);
+        }
+        
+        // create additional face geometry (vertex positions, vertex colors, 
+        // texCoords and normals) from building layout outlines
+        for (var j in building.outlines)
+        {
+            var outline = building.outlines[j];
+            for (var k = 0; k < outline.length-1; k++)
+            {
+                var v4 = outline[k];
+                var v3 = outline[k+1];
+                var v2 = [v3[0], v3[1], minHeight];
+                var v1 = [v4[0], v4[1], minHeight];
+                var N = getNormal(v1, v2, v3);
+
+                var wallLength = dist3(v3, v4);
+                var numWindows = (wallLength / 4.0) | 0;
+                //console.log("numWindows: %s; minHeight: %s", numWindows, minHeight);
+
+                var tc = [0, numLevels,   numWindows,numLevels,   numWindows,0,    0,numLevels,   numWindows,0,    0, 0];
+                this.texCoords.push.apply( this.texCoords, tc);
+
+                var norms = [].concat(N,N,N,    N,N,N);
+                this.normals.push.apply( this.normals, norms);
+                                
+                var coords = [].concat( v1, v2, v3,    v1, v3, v4); //two triangles form the quad v1-v2-v3-v4
+                this.vertices.push.apply(this.vertices, coords);
+
+                var wallColors = [].concat( faceWallColors, faceWallColors);    //wall colors for the two faces/triangles
+                [].push.apply( this.vertexColors, wallColors);
+                
+            }
         }
     }
+    //console.log(this.vertices);
     //console.log("
-
+    /*console.log("vertex floats: %s, color floats: %s, normal floats: %s, texCoord floats: %s", 
+                this.vertices.length, this.vertexColors.length, this.normals.length ,this.texCoords.length);*/
     this.numVertices = this.vertices.length/3.0;    // 3 coordinates per vertex
     this.numEdgeVertices = this.edgeVertices.length/3.0;
     console.log("'Buildings' total to %s faces and %s edges", this.numVertices/3, this.numEdgeVertices/2);
 
     this.vertices = glu.createArrayBuffer(this.vertices);
+    this.vertexColors = glu.createArrayBuffer(this.vertexColors);
     this.texCoords= glu.createArrayBuffer(this.texCoords);
     this.normals  = glu.createArrayBuffer(this.normals);
     this.edgeVertices = glu.createArrayBuffer(this.edgeVertices);
@@ -303,14 +324,18 @@ Buildings.prototype.render = function(modelViewMatrix, projectionMatrix) {
         //draw faces
 	    gl.useProgram(Shaders.building);   //    Install the program as part of the current rendering state
 	    gl.enableVertexAttribArray(Shaders.building.locations.vertexPosition); // setup vertex coordinate buffer
-	    gl.enableVertexAttribArray(Shaders.building.locations.vertexTexCoords); //setup texcoord buffer
+	    gl.enableVertexAttribArray(Shaders.building.locations.vertexColorIn); // setup vertex coordinate buffer
+	    //gl.enableVertexAttribArray(Shaders.building.locations.vertexTexCoords); //setup texcoord buffer
 	    gl.enableVertexAttribArray(Shaders.building.locations.vertexNormal); //setup texcoord buffer
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.vertices);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
 	    gl.vertexAttribPointer(Shaders.building.locations.vertexPosition, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
         
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexColors);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
+	    gl.vertexAttribPointer(Shaders.building.locations.vertexColorIn, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
+        
 	    gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoords);
-	    gl.vertexAttribPointer(Shaders.building.locations.vertexTexCoords, 3, gl.FLOAT, false, 0, 0);  //assigns array "texCoords" bound above as the vertex attribute "vertexTexCoords"
+	    gl.vertexAttribPointer(Shaders.building.locations.vertexTexCoords, 2, gl.FLOAT, false, 0, 0);  //assigns array "texCoords" bound above as the vertex attribute "vertexTexCoords"
 
         // can apparently be -1 if the variable is not used inside the shader
         if (Shaders.building.locations.vertexNormal > -1)
@@ -329,8 +354,9 @@ Buildings.prototype.render = function(modelViewMatrix, projectionMatrix) {
         //console.log(pos.x, pos.y, pos.z);
         gl.uniform3f(Shaders.building.locations.cameraPos, pos.x, pos.y, pos.z);
 
-        //gl.activeTexture(gl.TEXTURE0);  //successive commands (here 'gl.bindTexture()') apply to texture unit 0
-        //gl.bindTexture(gl.TEXTURE_2D, null); //render geometry without texture
+        gl.uniform1i(Shaders.building.locations.tex, 0); //select texture unit 0 as the source for the shader variable "tex" 
+        gl.activeTexture(gl.TEXTURE0);  //successive commands (here 'gl.bindTexture()') apply to texture unit 0
+        gl.bindTexture(gl.TEXTURE_2D, this.windowTexture); //render geometry without texture
         
         gl.enable(gl.POLYGON_OFFSET_FILL);  //to prevent z-fighting between rendered edges and faces
         gl.polygonOffset(1,1);

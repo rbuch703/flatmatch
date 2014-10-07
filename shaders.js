@@ -57,7 +57,7 @@ var Shaders = {
 
         Shaders.building = glu.createShader( Shaders.shaderSource["building-shader-vs"],
                                              Shaders.shaderSource["building-shader-fs"],
-                                             ["vertexPosition","vertexTexCoords", "vertexNormal"],
+                                             ["vertexPosition","vertexTexCoords", "vertexNormal", "vertexColorIn"],
                                              ["modelViewProjectionMatrix", "tex", "cameraPos"],
                                              Shaders.errorOutput);
         
