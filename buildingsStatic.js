@@ -152,6 +152,7 @@ Buildings.prototype.onDataLoaded = function(response) {
     //console.log("Buildings: %o", this.buildings);
 }
 
+/*
 Buildings.colorStringToRgbTriplet = function(col)
 {
     //input format: "#123456"
@@ -165,7 +166,7 @@ Buildings.colorStringToRgbTriplet = function(col)
     
     //return [r, g, b];
     
-}
+}*/
 
 Buildings.prototype.buildGlGeometry = function(geometry) {
     if (!gl)
@@ -185,15 +186,13 @@ Buildings.prototype.buildGlGeometry = function(geometry) {
     {
         var building = geometry[i];
         
-        var wallColor = Buildings.colorStringToRgbTriplet( building.wallColor);
-        var faceWallColors = [].concat(wallColor, wallColor, wallColor);
-
-        var roofColor = Buildings.colorStringToRgbTriplet( building.roofColor);
-        var faceRoofColors = [].concat(roofColor, roofColor, roofColor);    // three vertices per face --> triplicate vertex color
+        // three vertices per face --> triplicate vertex colors
+        var faceWallColors = [].concat(building.wallColor, building.wallColor, building.wallColor);
+        var faceRoofColors = [].concat(building.roofColor, building.roofColor, building.roofColor);
 
         var minHeight =   building.minHeightInMeters;
         var height    =   building.heightWithoutRoofInMeters - minHeight;
-        var numLevels =   (height / 3) | 0;
+        var numLevels =   building.numLevels | 0;
         
         //console.log(wallColor);
         
@@ -380,7 +379,7 @@ Buildings.prototype.render = function(modelViewMatrix, projectionMatrix) {
         mat4.mul(mvpMatrix, projectionMatrix, modelViewMatrix);
 	    gl.uniformMatrix4fv(Shaders.flat.locations.modelViewProjectionMatrix, false, mvpMatrix);
 	
-	    gl.uniform4fv( Shaders.flat.locations.color, [0.2, 0.2, 0.2, 1.0]);
+	    gl.uniform4fv( Shaders.flat.locations.color, [0.4, 0.4, 0.4, 1.0]);
         //console.log("rendering %s edges", this.numEdgeVertices);
         gl.drawArrays(gl.LINES, 0, this.numEdgeVertices);
     }
