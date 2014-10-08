@@ -17,7 +17,7 @@ function Buildings(gl, position)
 
     //var l = Math.floor((Math.random() * 256));
     //var initialColor = new Uint8Array([l, l, l]);
-    this.windowTexture = glu.createTextureFromBytes( new Uint8Array([255, 255, 0]) );
+    this.windowTexture = glu.createTextureFromBytes( new Uint8Array([255, 255, 255]) );
     gl.bindTexture(gl.TEXTURE_2D, this.windowTexture);
     //to allow tiling of windows
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
@@ -61,8 +61,8 @@ function Buildings(gl, position)
         var bldgs = this;
         var oReq = new XMLHttpRequest();
         oReq.onload = function() { bldgs.onDataLoaded(this); }
-        //var url = "http://rbuch703.de/tiles/geo/"+tiles[i].x+"/"+tiles[i].y+".json"
-        var url = "./geoTiles/"+tiles[i].x+"/"+tiles[i].y+".json"
+        var url = "http://rbuch703.de/tiles/geo/"+tiles[i].x+"/"+tiles[i].y+".json"
+        //var url = "./geoTiles/"+tiles[i].x+"/"+tiles[i].y+".json"
 //        console.log("requesting %s", url);
         oReq.overrideMimeType("text/plain");    //necessary to stop Firefox from logging a spurious error
         oReq.open("get", url, true);
@@ -192,7 +192,7 @@ Buildings.prototype.buildGlGeometry = function(geometry) {
         var faceRoofColors = [].concat(roofColor, roofColor, roofColor);    // three vertices per face --> triplicate vertex color
 
         var minHeight =   building.minHeightInMeters;
-        var height    =   building.heightWithoutRoofInMeters;
+        var height    =   building.heightWithoutRoofInMeters - minHeight;
         var numLevels =   (height / 3) | 0;
         
         //console.log(wallColor);
@@ -248,7 +248,7 @@ Buildings.prototype.buildGlGeometry = function(geometry) {
                 var N = getNormal(v1, v2, v3);
 
                 var wallLength = dist3(v3, v4);
-                var numWindows = (wallLength / 4.0) | 0;
+                var numWindows = (wallLength / 2.0) | 0;
                 //console.log("numWindows: %s; minHeight: %s", numWindows, minHeight);
 
                 var tc = [0, numLevels,   numWindows,numLevels,   numWindows,0,    0,numLevels,   numWindows,0,    0, 0];

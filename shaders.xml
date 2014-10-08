@@ -29,30 +29,40 @@
 	}
 </script>
 
+<script id="building-shader-vs" type="x-shader/x-vertex">
+	attribute vec3 vertexPosition;
+    attribute vec2 vertexTexCoords; 			
+    attribute vec3 vertexNormal;
+    attribute vec3 vertexColorIn;
+	
+	uniform mat4 modelViewProjectionMatrix;
+    uniform vec3 cameraPos;
+
+    varying vec2 texCoordV;
+    varying vec3 normal;
+    varying vec3 vertexColor;
+
+	void main(void) {
+		gl_Position = modelViewProjectionMatrix * vec4(vertexPosition, 1.0);
+
+		texCoordV = vertexTexCoords;
+
+        vec3 vView = normalize( cameraPos - vertexPosition); 
+        float diffuse = abs( 0.5 * dot(vView, vertexNormal) );
+		vertexColor = vertexColorIn * (diffuse + 0.4);
+	}
+</script>
+
 
 <script id="building-shader-fs" type="x-shader/x-fragment">
 <![CDATA[
 	precision mediump float;
     varying vec2 texCoordV;
-    varying vec3 normal;
-    varying vec3 worldPosition;
     varying vec3 vertexColor;
-    
-    uniform vec3 cameraPos;
     uniform sampler2D tex;
     
-    //uniform float height;
 	void main(void) {
-	    const float c = 0.02;
-
-        vec3 vView = normalize( cameraPos - worldPosition); //direction vector from surface to camera (camera is always at (0,0,0) )
-        float diffuse = abs( 0.5 * dot(vView, normal) );
-
-        vec3 texCol = texture2D(tex, texCoordV).rgb;
-        vec3 col = vertexColor *(diffuse+0.4)* texCol;// * vec3(window, flr, 1.0);
-            
-        gl_FragColor = vec4(  col, 1.0);
-        
+        gl_FragColor = vec4(  texture2D(tex, texCoordV).rgb * vertexColor, 1.0);
 	}
 ]]>
 </script>
@@ -147,29 +157,6 @@
 	    }
 	}
 ]]>
-</script>
-
-
-<script id="building-shader-vs" type="x-shader/x-vertex">
-	attribute vec3 vertexPosition;
-    attribute vec2 vertexTexCoords; 			
-    attribute vec3 vertexNormal;
-    attribute vec3 vertexColorIn;
-	
-	uniform mat4 modelViewProjectionMatrix;
-
-    varying vec2 texCoordV;
-    varying vec3 normal;
-    varying vec3 worldPosition;
-    varying vec3 vertexColor;
-
-	void main(void) {
-		gl_Position = modelViewProjectionMatrix * vec4(vertexPosition, 1.0);
-		worldPosition = vertexPosition; //pass through untransformed
-		texCoordV = vertexTexCoords;
-		normal = vertexNormal;
-		vertexColor = vertexColorIn;
-	}
 </script>
 
 <script id="flat-shader-vs" type="x-shader/x-vertex">
