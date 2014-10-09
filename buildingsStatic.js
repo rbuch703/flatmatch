@@ -44,8 +44,10 @@ function Buildings(gl, position)
     var x = long2tile(position.lng,14);
     var y = lat2tile( position.lat,14);
 
-    var listX = x % 1 > 0.5 ? [0, 1] : [-1, 0];
-    var listY = y % 1 > 0.5 ? [0, 1] : [-1, 0];
+    /*var listX = x % 1 > 0.5 ? [0, 1] : [-1, 0];
+    var listY = y % 1 > 0.5 ? [0, 1] : [-1, 0];*/
+    var listX = [-1, 0, 1];
+    var listY = [-1, 0, 1];
    
     x = Math.floor(x);
     y = Math.floor(y);
@@ -75,7 +77,7 @@ Buildings.prototype.onDataLoaded = function(response) {
     var geometry =  [].push.apply(this.geometry,JSON.parse(response.responseText));
 	this.numTilesLoaded += 1;
 	
-	if (this.numTilesLoaded != 4)
+	if (this.numTilesLoaded != 9)
 	    return;
 	
     //console.log(this.geometry);
@@ -94,6 +96,7 @@ Buildings.prototype.onDataLoaded = function(response) {
         
         var vertices = [];
         //convert vertices from lat/lng to local coordinate system (in meters)
+        var closestDistSq = 1E10;
         for (var j in building.vertices)
         {
             var v = building.vertices[j];
@@ -102,7 +105,25 @@ Buildings.prototype.onDataLoaded = function(response) {
             
             var y = dLat/360 * earthCircumference;
             var x = dLng/360 * earthCircumference * cosLat;
+            
+            var distSq = x*x + y*y;
+            if (distSq < closestDistSq)
+                closestDistSq = distSq;
             vertices.push([x, -y, v[2]]);
+        }
+        
+        /** Limit viewing distance to 1.5 km to make rendering faster
+          * This also equalizes the viewing distance: We always request the geometry tile the camera is in 
+          * (no matter where in the tile the camera is), as well as all eight surrounding tiles. Thus, the
+          * the viewing distance in a given direction may vary between 1.0 and 2.0 tiles (at 50° latitude 
+          * corresponding to about 1.5 to 3km).
+          */
+        if (closestDistSq > 1500*1500)
+        {
+            building.edges = [];
+            building.faces = [];
+            building.outlines = [];
+            continue;
         }
         
         // replace edge vertex IDs by actual edge vertices
@@ -322,16 +343,16 @@ Buildings.prototype.render = function(modelViewMatrix, projectionMatrix) {
     {
         //draw faces
 	    gl.useProgram(Shaders.building);   //    Install the program as part of the current rendering state
-	    gl.enableVertexAttribArray(Shaders.building.locations.vertexPosition); // setup vertex coordinate buffer
-	    gl.enableVertexAttribArray(Shaders.building.locations.vertexColorIn); // setup vertex coordinate buffer
-	    //gl.enableVertexAttribArray(Shaders.building.locations.vertexTexCoords); //setup texcoord buffer
-	    gl.enableVertexAttribArray(Shaders.building.locations.vertexNormal); //setup texcoord buffer
+	    gl.enableVertexAttribArray(Shaders.building.locations.vertexPosition);  // setup vertex coordinate buffer,
+	    gl.enableVertexAttribArray(Shaders.building.locations.vertexColorIn);   // vertex color buffer,
+	    gl.enableVertexAttribArray(Shaders.building.locations.vertexTexCoords); // texcoord buffer, and
+	    gl.enableVertexAttribArray(Shaders.building.locations.vertexNormal);    // vertex normal buffer
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.vertices);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
 	    gl.vertexAttribPointer(Shaders.building.locations.vertexPosition, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
         
         gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexColors);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
-	    gl.vertexAttribPointer(Shaders.building.locations.vertexColorIn, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
+	    gl.vertexAttribPointer(Shaders.building.locations.vertexColorIn, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexColorIn"
         
 	    gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoords);
 	    gl.vertexAttribPointer(Shaders.building.locations.vertexTexCoords, 2, gl.FLOAT, false, 0, 0);  //assigns array "texCoords" bound above as the vertex attribute "vertexTexCoords"

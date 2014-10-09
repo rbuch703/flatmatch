@@ -116,8 +116,10 @@ MapLayer.prototype.createTileHierarchy = function()
     var x = long2tile(Controller.position.lng,12);
     var y = lat2tile( Controller.position.lat,12);
     
-    var listX = x % 1 > 0.5 ? [0, 1] : [-1, 0];
-    var listY = y % 1 > 0.5 ? [0, 1] : [-1, 0];
+    var listX = [-1, 0, 1];
+    var listY = [-1, 0, 1];
+    //var listX = x % 1 > 0.5 ? [0, 1] : [-1, 0];
+    //var listY = y % 1 > 0.5 ? [0, 1] : [-1, 0];
     
     x = Math.floor(x);
     y = Math.floor(y);
