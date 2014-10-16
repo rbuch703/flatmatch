@@ -74,7 +74,16 @@ function Buildings(gl, position)
 }    
 
 Buildings.prototype.onDataLoaded = function(response) {
-    var geometry =  [].push.apply(this.geometry,JSON.parse(response.responseText));
+    try
+    {
+        var responseGeometry = JSON.parse(response.responseText);
+        [].push.apply(this.geometry, responseGeometry);
+    }
+    catch(err)
+    {
+        console.log ("Error parsing JSON response of request '%s': %s", response.url, err.message);
+    }
+
 	this.numTilesLoaded += 1;
 	
 	if (this.numTilesLoaded != 9)
@@ -91,7 +100,7 @@ Buildings.prototype.onDataLoaded = function(response) {
     for (var i in this.geometry)
     {    
         var building = this.geometry[i];
-        var minHeight = building.minHeightInMeters | 0;
+        var minHeight = building.minHeightInMeters;
         //var building.heightInMeters = building.vertices[0][2] - minHeight; 
         
         var vertices = [];
