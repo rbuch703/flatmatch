@@ -123,7 +123,7 @@ function offerMetadataLoaded(offer)
         Controller.viewAngleYaw = parseFloat(offer.yaw);
     
     if (glu.performShadowMapping)
-        mapSun = new Sun( Controller.position.lat, Controller.position.lng );
+        mapSun = new Sun( Controller.position );
         
     //initialize mapSun date/time
     onSunPositionChanged( $( "#slider-day" ).slider( "value"), $( "#slider-time" ).slider( "value"));

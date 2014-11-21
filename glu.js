@@ -1,5 +1,6 @@
+"use strict"    
 
-glu = {};
+var glu = {};
 
 glu.compileShader = function (src_str, type)
 {
@@ -35,6 +36,18 @@ glu.createProgram = function (vShader, fShader)
 	return [true, shaderProgram];
 }
 
+glu.enableVertexAttribArrays = function(shaderProgram)
+{
+    for (var i in shaderProgram.attribLocations)
+        gl.enableVertexAttribArray( shaderProgram.attribLocations[i] );
+}
+
+glu.disableVertexAttribArrays = function(shaderProgram)
+{
+    for (var i in shaderProgram.attribLocations)
+        gl.disableVertexAttribArray( shaderProgram.attribLocations[i] );
+}
+
 glu.createShader = function( vertexShaderCode, fragmentShaderCode, attribLocations, uniformLocations, errorOutput)
 {
     var tmp = glu.compileShader( vertexShaderCode, gl.VERTEX_SHADER);
@@ -67,10 +80,15 @@ glu.createShader = function( vertexShaderCode, fragmentShaderCode, attribLocatio
 	gl.useProgram(shaderProgram);   //    Install the program as part of the current rendering state
 
     shaderProgram.locations = {};
-
+    shaderProgram.attribLocations = [];
+    
     //get location of variables in shader program (to later bind them to values);
     for (var i in attribLocations)
-        shaderProgram.locations[ attribLocations[i]] = gl.getAttribLocation( shaderProgram, attribLocations[i]); 
+    {
+        var location = gl.getAttribLocation( shaderProgram, attribLocations[i]);
+        shaderProgram.attribLocations.push(location);
+        shaderProgram.locations[ attribLocations[i]] = location; 
+    }
         
     for (var i in uniformLocations)
         shaderProgram.locations[ uniformLocations[i] ] = gl.getUniformLocation( shaderProgram, uniformLocations[i]); 

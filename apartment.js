@@ -42,13 +42,13 @@ Apartment.prototype.render = function(modelViewMatrix, projectionMatrix, shadowM
     var mvpMatrix = mat4.create();
     mat4.mul(mvpMatrix, projectionMatrix, modelViewMatrix);
 	gl.useProgram(Shaders.shadow);   //    Install the program as part of the current rendering state
+	glu.enableVertexAttribArrays(Shaders.shadow);
+
 	gl.uniformMatrix4fv(Shaders.shadow.locations.modelViewProjectionMatrix, false, mvpMatrix);
 
-	gl.enableVertexAttribArray(Shaders.shadow.locations.vertexPosition); // setup vertex coordinate buffer
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertices);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
 	gl.vertexAttribPointer(Shaders.shadow.locations.vertexPosition, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
     
-	gl.enableVertexAttribArray(Shaders.shadow.locations.vertexTexCoords); //setup texcoord buffer
 	gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoords);
 	gl.vertexAttribPointer(Shaders.shadow.locations.vertexTexCoords, 2, gl.FLOAT, false, 0, 0);  //assigns array "texCoords" bound above as the vertex attribute "vertexTexCoords"
 
@@ -64,8 +64,6 @@ Apartment.prototype.render = function(modelViewMatrix, projectionMatrix, shadowM
         gl.uniform1i(Shaders.shadow.locations.tex, 0); //select texture unit 0 as the source for the shader variable "tex" 
         gl.uniform1i(Shaders.shadow.locations.shadowTex, 1); //select texture unit 1 as the source for the shader variable "shadowTex" 
 
-
-	    gl.enableVertexAttribArray(Shaders.shadow.locations.normalIn); //setup normal buffer
 	    gl.bindBuffer(gl.ARRAY_BUFFER, this.normals);
 	    gl.vertexAttribPointer(Shaders.shadow.locations.normalIn, 3, gl.FLOAT, false, 0, 0);  //assigns array "texCoords" bound above as the vertex attribute "vertexTexCoords"
 
@@ -81,10 +79,12 @@ Apartment.prototype.render = function(modelViewMatrix, projectionMatrix, shadowM
             
 	    gl.drawArrays(gl.TRIANGLES, i, 6);
     }
+	glu.disableVertexAttribArrays(Shaders.shadow);
+
     
     //step 2: render box (outside) geometry
 	gl.useProgram( Shaders.flat );   //    Install the program as part of the current rendering state
-	gl.enableVertexAttribArray(Shaders.flat.locations.vertexPosition); // setup vertex coordinate buffer
+	glu.enableVertexAttribArrays(Shaders.flat);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.boxVertices);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
 	gl.vertexAttribPointer(Shaders.flat.locations.vertexPosition, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
     
@@ -92,6 +92,8 @@ Apartment.prototype.render = function(modelViewMatrix, projectionMatrix, shadowM
 	gl.uniform4fv( Shaders.flat.locations.color, [0.5, 0.5, 0.55, 1.0]);
     
 	gl.drawArrays(gl.TRIANGLES, 0, this.numBoxVertices);
+
+	glu.disableVertexAttribArrays(Shaders.shadow);
 
     
     
@@ -110,10 +112,11 @@ Apartment.prototype.renderDepth = function(modelViewMatrix, projectionMatrix)
     mat4.mul(mvpMatrix, projectionMatrix, modelViewMatrix);
 
 	gl.useProgram(Shaders.depth);   //    Install the program as part of the current rendering state
+	glu.enableVertexAttribArrays(Shaders.depth);
+
 	gl.uniformMatrix4fv(Shaders.depth.locations.modelViewProjectionMatrix, false, mvpMatrix);
     gl.uniform3fv(Shaders.depth.locations.lightPos, mapSun.getPosition());
 
-	gl.enableVertexAttribArray(Shaders.depth.locations.vertexPos); // setup vertex coordinate buffer
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertices);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
 	gl.vertexAttribPointer(Shaders.depth.locations.vertexPos, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
@@ -124,6 +127,7 @@ Apartment.prototype.renderDepth = function(modelViewMatrix, projectionMatrix)
     gl.drawArrays(gl.TRIANGLES, 0, this.numBoxVertices);
 
 
+	glu.disableVertexAttribArrays(Shaders.depth);
     gl.enable(gl.CULL_FACE);
 }
 

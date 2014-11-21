@@ -315,7 +315,7 @@ Buildings.prototype.renderDepth = function(modelViewMatrix, projectionMatrix) {
     gl.cullFace(gl.FRONT);
 
 	gl.useProgram(Shaders.depth);   //    Install the program as part of the current rendering state
-	gl.enableVertexAttribArray(Shaders.depth.locations.vertexPosition); // setup vertex coordinate buffer
+	glu.enableVertexAttribArrays(Shaders.depth);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertices);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
 	gl.vertexAttribPointer(Shaders.depth.locations.vertexPosition, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
@@ -331,6 +331,7 @@ Buildings.prototype.renderDepth = function(modelViewMatrix, projectionMatrix) {
     gl.drawArrays(gl.TRIANGLES, 0, this.numVertices);    
 
     gl.cullFace(gl.BACK);   //reset to normal behavior
+    glu.disableVertexAttribArrays(Shaders.depth);
 
 }
 
@@ -343,10 +344,7 @@ Buildings.prototype.render = function(modelViewMatrix, projectionMatrix) {
     {
         //draw faces
 	    gl.useProgram(Shaders.building);   //    Install the program as part of the current rendering state
-	    gl.enableVertexAttribArray(Shaders.building.locations.vertexPosition);  // setup vertex coordinate buffer,
-	    gl.enableVertexAttribArray(Shaders.building.locations.vertexColorIn);   // vertex color buffer,
-	    gl.enableVertexAttribArray(Shaders.building.locations.vertexTexCoords); // texcoord buffer, and
-	    gl.enableVertexAttribArray(Shaders.building.locations.vertexNormal);    // vertex normal buffer
+	    glu.enableVertexAttribArrays(Shaders.building);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.vertices);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
 	    gl.vertexAttribPointer(Shaders.building.locations.vertexPosition, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
@@ -384,6 +382,8 @@ Buildings.prototype.render = function(modelViewMatrix, projectionMatrix) {
         gl.drawArrays(gl.TRIANGLES, 0, this.numVertices);
 
         gl.disable(gl.POLYGON_OFFSET_FILL);
+	    glu.disableVertexAttribArrays(Shaders.building);
+
     }
     // ===
     
@@ -391,7 +391,7 @@ Buildings.prototype.render = function(modelViewMatrix, projectionMatrix) {
     {
         //step 2: draw outline
         gl.useProgram(Shaders.flat);   //    Install the program as part of the current rendering state
-	    gl.enableVertexAttribArray(Shaders.flat.locations.vertexPosition); // setup vertex coordinate buffer
+	    glu.enableVertexAttribArrays(Shaders.flat);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.edgeVertices);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
 	    gl.vertexAttribPointer(Shaders.flat.locations.vertexPosition, 3, gl.FLOAT, false, 0, 0);  //assigns array "edgeVertices" bound above as the vertex attribute "vertexPosition"
@@ -403,6 +403,7 @@ Buildings.prototype.render = function(modelViewMatrix, projectionMatrix) {
 	    gl.uniform4fv( Shaders.flat.locations.color, [0.4, 0.4, 0.4, 1.0]);
         //console.log("rendering %s edges", this.numEdgeVertices);
         gl.drawArrays(gl.LINES, 0, this.numEdgeVertices);
+	    glu.disableVertexAttribArrays(Shaders.flat);
     }
 }
 
