@@ -8,6 +8,7 @@ java -jar ~/Downloads/ClosureCompiler/compiler.jar --js_output_file combined.js 
     controller.js   \
     gl-matrix.js    \
     glu.js          \
+    helpers.js      \
     jquery.js       \
     jquery-ui.js    \
     main.js         \

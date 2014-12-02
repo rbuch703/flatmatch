@@ -4,28 +4,33 @@ var ApartmentMap = {
 
 	//layoutImage
 
-    init: function(canvas, layoutId) 
+    init: function(canvas, layoutSrc) 
     {
         ApartmentMap.canvas = canvas;
         
         ApartmentMap.layoutImage = new Image();
-        ApartmentMap.layoutImage.onload = function() {ApartmentMap.resize(); scheduleFrameRendering();};
-        ApartmentMap.layoutImage.src = OFFER_REST_BASE_URL + "/get/layout/"+ layoutId;
+        ApartmentMap.layoutImage.onload = function() {
+            ApartmentMap.scaledLayout = null;   //to trigger a re-render on next draw;
+            ApartmentMap.resize(); 
+            scheduleFrameRendering();
+        };
+        ApartmentMap.layoutImage.src = layoutSrc;
         
-        
-        ApartmentMap.canvas.addEventListener("click", function(ev) {
-	        var canvasScale = Math.min( ApartmentMap.canvas.width  / ApartmentMap.layoutImage.width, 
-	                                    ApartmentMap.canvas.height / ApartmentMap.layoutImage.height);
+        ApartmentMap.canvas.removeEventListener("click", ApartmentMap.onMapClick);
+        ApartmentMap.canvas.addEventListener("click", ApartmentMap.onMapClick);
+    },
+    
+    onMapClick: function(ev) {
+        var canvasScale = Math.min( ApartmentMap.canvas.width  / ApartmentMap.layoutImage.width, 
+                                    ApartmentMap.canvas.height /ApartmentMap.layoutImage.height);
 
-            var pos = ApartmentMap.canvas.getBoundingClientRect();
+        var pos = ApartmentMap.canvas.getBoundingClientRect();
 
-            var x = (ev.clientX - pos.x)  / canvasScale;
-            var y = (ev.clientY - pos.y)  / canvasScale;
-        
-            if (ApartmentMap.onClick)
-                ApartmentMap.onClick(x, y);
-        });
-
+        var x = (ev.clientX - pos.x)  / canvasScale;
+        var y = (ev.clientY - pos.y)  / canvasScale;
+    
+        if (ApartmentMap.onClick)
+            ApartmentMap.onClick(x, y);
     },
     
     scaledLayout: null,

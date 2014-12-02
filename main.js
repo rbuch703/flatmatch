@@ -54,7 +54,7 @@ function asPriceString( val)
     return res + "," + tmp + " €";
 }
 
-function initEventHandler()
+function initEventHandlers()
 {
    /* prevention of default event handling is required for:
      * - 'mousedown': otherwise dragging the mouse cursor beyond the canvas would select the page text in chrome
@@ -161,9 +161,12 @@ function offerMetadataLoaded(offer)
 
     VicinityMap.init("mapDiv", offer.lat, offer.lon);
 
-    ApartmentMap.init(minimapCanvas, offer.layoutId);
+    var layoutImageSrc = offer.layoutImageUrl ? 
+                         offer.layoutImageUrl :
+                         OFFER_REST_BASE_URL + "/get/layout/"+ offer.layoutId;
+    ApartmentMap.init(minimapCanvas, layoutImageSrc);
 
-    initEventHandler();
+    initEventHandlers();
     
     scheduleFrameRendering();
 
@@ -466,7 +469,7 @@ function renderScene()
 
     var modelViewMatrix = glu.lookAt(Controller.viewAngleYaw, Controller.viewAnglePitch, Controller.localPosition);
     var projectionMatrix = mat4.create();
-    mat4.perspective(projectionMatrix, fieldOfView/180*Math.PI, webGlCanvas.width / webGlCanvas.height, 2, 5100.0);
+    mat4.perspective(projectionMatrix, fieldOfView/180*Math.PI, webGlCanvas.width / webGlCanvas.height, 0.5, 5100.0);
 
     gl.enable(gl.CULL_FACE);
 
