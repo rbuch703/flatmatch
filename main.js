@@ -243,9 +243,6 @@ function init()
     jQuery("#slider-day .ui-slider-handle").unbind('keydown');    
     jQuery("#slider-time .ui-slider-handle").unbind('keydown');    
     
-    if (!glu.performShadowMapping)
-        aSunPos.style.display = "none";
-    
     var req = new XMLHttpRequest();
     req.open("GET", OFFER_REST_BASE_URL + "/get/offer/" + rowId );
     req.responseType = "";
