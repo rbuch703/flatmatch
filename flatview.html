@@ -35,6 +35,7 @@
     <script type="text/javascript" src="shaders.js"></script>
     <script type="text/javascript" src="tile.js"></script>
     <script type="text/javascript" src="vicinityMap.js"></script>
+    <script type="text/javascript" src="uiElements.js"></script>
     <!-- <script type="text/javascript" src="poly2tri.js"></script> -->
     <script type="text/javascript" src="webgl-debug.js"></script>
 
@@ -60,11 +61,44 @@
     </p>
 </div>
 
+<div id="dummy" style="position:fixed; left:0px; right:0px; top:0px; bottom: 0px; width:100%; height:100%;" >
+    <canvas id="webGlCanvas" style="position:fixed; left:0px; right:0px; top:0px; bottom: 0px; width:100%; height:100%; background:black" ></canvas>
+
+    <div id="toolbarDiv" style="position:fixed; left:10px; top:10px; z-index:1; height:34px">
+        <img id="btnFullScreen" style="background-color:white">
+        &nbsp;
+    </div>
+
+    <div id="mapDiv" style="position:fixed; left:10px; width:400px; top:56px; height:400px;z-index:1; display:none"> </div>
+
+    <canvas id="minimapCanvas" style="position:fixed; left:10px; top:56px; height:400px; width:400px; border: 1px solid #777; z-index:1" ></canvas>
+
+    <div id="divSunPos" style="position:fixed; left:10px; width:400px; top:56px; height:300px; z-index:1; background-color:white; display:none; padding-left:20px; padding-right:20px">
+        <div>
+            <h3>Sonnenposition</h3>
+            Verschieben sie die Regler, um die Position der Sonnen und damit den Schattenfall anzupassen.
+            <p>
+                Tag: <span id="lblDay" ></span>
+                <div id="slider-day" style="width:100%"></div>
+            </p>
+            <p>
+                Zeit: <span id="lblTime" ></span>
+                <div id="slider-time" style="width:100%"></div>   
+            </p>
+        </div>
+    </div>
+
+    <div id="divUsageNotes" style="position:fixed; left:10px; width:400px; top:56px; z-index:1; background-color:white; padding-left:20px; padding-right:20px">
+        <h3>Anleitung</h3>
+        <ul>
+            <li>Bewegen sie sich durch die 3D-Ansicht mit den Pfeiltasten ihrer Tastatur, oder durch Ziehen der Ansicht auf ihrem Touchscreen.</li>
+            <li>Schauen sie sich um durch Klicken und Ziehen der Ansicht mit der Maus.</li>
+            <li>Springen sie zu einer beliebigen Stelle in der Wohnung durch Klicken auf die entsprechende Stelle im Wohnungsgrundriss.</li>
+        </ul>
+    </div>
 
 
-<!--<div style="width:100%; height:100%"> -->
-<div id="navDiv" style="">
-    <div id="divNavContainer" style="padding-left:20px;padding-right: 20px; ">
+    <div id="divDetails" style="position:fixed; left:10px; width:400px; top:56px; z-index:1; background-color:white; padding-left:20px;padding-right: 20px; padding-bottom:20px ">
 
         <h3 id="hBaseInfo">Wohnungsinformationen</h3>
         <div id="divBaseInfo">
@@ -78,63 +112,13 @@
         </table>
         </div>
 
-        <h3 id="hFurtherInfo" style="padding-top:20px">Weitere Informationen</h3>
-        <div style="padding-bottom:20px">
-            <div style="border-bottom: 1px solid #777"> </div>
-            <a href="#" id="aBaseInfo" class="tabHeader">Info</a>
-            <a href="#" id="aLayout" class="tabHeader tabHeaderSelected">Grundriss</a>
-            <a href="#" id="aVicinity" class="tabHeader">Umgebung</a>
-            <a href="#" id="aSunPos" class="tabHeader">Sonnenstand</a>
-            <a href="#" id="aDisclaimer" class="tabHeader">Disclaimer</a>
-            <a href="#" id="aUsageNotes" class="tabHeader">Bedienung</a>
-        </div>
-
-        <div id="divSunPos" style="display:none">
-            <!-- <h3>Sonnenstand </h3> -->
-            <p>
-            Tag: <span id="lblDay" ></span>
-            <div id="slider-day" style="width:100%"></div></p>
-            <p>
-            Zeit: <span id="lblTime" ></span>
-            <div id="slider-time" style="width:100%"></div>   
-            </p>
-        </div>
-        <div id="divLayout" style="">
-            <!-- <h3>Wohnungsgrundriss: </h3> -->
-	        <canvas id="minimapCanvas" style="width:100%; height:600px; border: 1px solid #777" ></canvas>
-        </div>
-
-        <div id="divVicinity" style="display:none">
-            <!-- <h3>Nähere Umgebung </h3> -->
-            <div id="mapDiv" style="width:100%; height:600px;"> </div>
-        </div>
-
-        <div id="divUsageNotes" style="display:none">
-	        <ul>
-	            <li>Bewegen sie sich durch die 3D-Ansicht mit den Pfeiltasten ihrer Tastatur, oder durch Ziehen der Ansicht auf ihrem Touchscreen.</li>
-	            <li>Schauen sie sich um durch Klicken und Ziehen der Ansicht mit der Maus.</li>
-	            <li>Springen sie zu einer beliebigen Stelle in der Wohnung durch Klicken auf die entsprechende Stelle im Wohnungsgrundriss.</li>
-	        </ul>
-        </div>
-
-    </div>
 </div>
 
-
-<div id="contentDiv" >
-    <!-- <div id="nav" style="background-color:#EEE; position:fixed; width:75%; top:50px; bottom:0px; right: 0px; overflow-y:scroll">-->
-		<canvas id="webGlCanvas" style="width:100%; background:black" ></canvas>
-        <div id="divDisclaimer" style="font-size:80%; font-style:italic">
-The map and building geometry are &copy;OpenStreetMap contributors and are <a href="http://www.openstreetmap.org/copyright">licensed</a> under the Creative Commons BY-SA (map) and Open Database License (buildings) licenses.<br> For administrative questions on this page please contact the <a href="mailto:rbuch703@gmail.com">webmaster</a>.
-        </div>
+<div id="divDisclaimer" style="position:fixed; bottom:10px; font-size:80%; font-style:italic">
+The map and building geometry are &copy;OpenStreetMap contributors and are <a href="http://www.openstreetmap.org/copyright">licensed</a> under the Creative Commons BY-SA (map) and Open Database License (buildings) licenses. For administrative questions on this page please contact the <a href="mailto:rbuch703@gmail.com">webmaster</a>.
+</div>
         
         <span id="errorLog" style="color:#F00"></span>
-<!--        <span id="yawLog" style="color:#FF0000">YAW</span><br>
-        <span id="posLog" style="color:#0000FF">LAT LNG</span><br><br>
-        <span id="addressLog" style="color:#777">Address</span><br> -->
-</div>
-
-<!-- </div> -->
 
 
 </body>

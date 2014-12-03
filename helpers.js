@@ -1,12 +1,12 @@
 "use strict"
 
-var Helpers = {
+var Helpers = (function(){
 
-    getEarthCircumference : function() { return 2 * Math.PI * (6378.1 * 1000); },
-    getColor : function(colorName) { return Helpers.colors[colorName];},
+    function getEarthCircumference() { return 2 * Math.PI * (6378.1 * 1000); }
+    function getColor(colorName) { return Helpers.colors[colorName];}
 
 //map of all default CSS color names
-    colors : {
+    var colors = {
     "aliceblue":"#f0f8ff","antiquewhite":"#faebd7","aqua":"#00ffff","aquamarine":"#7fffd4","azure":"#f0ffff",
     "beige":"#f5f5dc","bisque":"#ffe4c4","black":"#000000","blanchedalmond":"#ffebcd","blue":"#0000ff",
     "blueviolet":"#8a2be2","brown":"#a52a2a","burlywood":"#deb887","cadetblue":"#5f9ea0","chartreuse":"#7fff00",
@@ -36,5 +36,39 @@ var Helpers = {
     "springgreen":"#00ff7f","steelblue":"#4682b4","tan":"#d2b48c","teal":"#008080","thistle":"#d8bfd8","tomato":"#ff6347",
     "turquoise":"#40e0d0","violet":"#ee82ee","wheat":"#f5deb3","white":"#ffffff","whitesmoke":"#f5f5f5","yellow":"#ffff00",
     "yellowgreen":"#9acd32"}
+    
+    var daysPerMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
-};
+    function getDayString(dayOfYear)
+    {
+        var day = ((dayOfYear % 366) | 0)+1;
+        var monthNames = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+        
+        for (var month = 0; day > daysPerMonth[month]; month++)
+            day -= daysPerMonth[month];
+            
+        return "" + day + ". " + monthNames[month];
+    }
+
+    function getDayOfYear(date)
+    {
+        var month = date.getMonth();        //Note the JavaScript Date API is 0-based for the getMonth(),
+        var dayOfYear = date.getDate()-1;   //but 1-based for getDate()
+        
+        for (var i = 0; i < month; i++)
+            dayOfYear += daysPerMonth[i];
+
+        //for now, we just ignore leap years altogether        
+        //var year = date.getFullYear();
+        //var isLeapYear =  (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0));
+        
+        //in a leap year, every day after February 28th is one day further from the beginning of that year than normal
+        //if (isLeapYear && dayOfYear > daysPerMonth[0] + daysPerMonth[1])
+        //    dayOfYear += 1;
+            
+        return dayOfYear;
+    }
+
+    return {getEarthCircumference: getEarthCircumference, getDayString: getDayString, getColor: getColor};
+
+})();

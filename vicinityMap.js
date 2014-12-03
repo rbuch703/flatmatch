@@ -80,26 +80,9 @@ var VicinityMap = {
 	    VicinityMap.frustum = L.polygon(line, {color: 'red', noClip: 'true', fillColor:"white", fillOpacity:0.4}).addTo(VicinityMap.map);
 	},
 
-    onMapClick: function(e)
+    onChangeSize: function()
     {
-        /*var dLat = e.latlng.lat - Controller.position.lat;
-        var dLng = e.latlng.lng - Controller.position.lng;
-
-        var earthCircumference = 2 * Math.PI * (6378.1 * 1000);
-        var metersPerDegreeLat = earthCircumference / 360;
-        var metersPerDegreeLng = metersPerDegreeLat * Math.cos( Controller.position.lat / 180 * Math.PI);
-        
-        var dx = dLng * metersPerDegreeLng - Controller.localPosition.x;
-        var dy = dLat * metersPerDegreeLat - Controller.localPosition.y;
-        var dYaw = -(Math.atan2(dy, dx) / Math.PI * 180 - 90);
-        //console.log(e.latlng.lat, e.latlng.lng, dYaw);
-        yawLog.innerHTML = "./setApartmentYaw.py " + rowId + " " + dYaw.toFixed(1);
-        posLog.innerHTML = "./setApartmentPosition.py " + rowId + " " + e.latlng.lat + " " + e.latlng.lng;
-        */
-        
-        /*Controller.position = e.latlng;
-        onChangeLocation();*/
-    }   
-
+        VicinityMap.map.invalidateSize(false);
+    }
 
 }

@@ -75,25 +75,14 @@ function initEventHandlers()
     document.addEventListener("keyup",   function(ev) {Controller.onKeyUp(ev);},  false);
 	document.body.onresize = onResize;
 
-    aLayout.addEventListener(  "click",  function(ev) { ev.preventDefault(); onTabClicked(aLayout,    divLayout);} );
-    aSunPos.addEventListener(  "click",  function(ev) { ev.preventDefault(); onTabClicked(aSunPos,    divSunPos);} );
-    aVicinity.addEventListener("click",  function(ev) { ev.preventDefault(); onTabClicked(aVicinity,  divVicinity);} );
-    aDisclaimer.addEventListener("click",function(ev) { ev.preventDefault(); onTabClicked(aDisclaimer,divDisclaimer);} );
-    aBaseInfo.addEventListener("click",  function(ev) { ev.preventDefault(); onTabClicked(aBaseInfo,  divBaseInfo);} );
-    aUsageNotes.addEventListener("click",  function(ev) { ev.preventDefault(); onTabClicked(aUsageNotes,  divUsageNotes);} );
-
-    divVicinity.onShow =  onVicinityMapShow;
-    divLayout.onShow = onApartmentMapShow;
     
-	ApartmentMap.onClick = function(x,y) { 
+	ApartmentMap.addEventListener("click", function(x,y) { 
         var newPos = mapApartment.pixelToLocalCoordinates([x,y]);
         Controller.moveTo( newPos.x, newPos.y);
         scheduleFrameRendering();
-    };
+    }, false );
     
     Controller.onRequestFrameRender = scheduleFrameRendering;
-    
-    
 }
 
 function offerMetadataLoaded(offer)
@@ -172,75 +161,13 @@ function offerMetadataLoaded(offer)
 
 }    
 
-function onTabClicked(anchor, tab)
-{
-    var anchors = [aLayout, aSunPos, aVicinity, aUsageNotes];
-    var tabs =    [divLayout, divSunPos, divVicinity, divUsageNotes];
-    
-    if (mqSaveSpace.matches)
-    {
-        anchors = anchors.concat([aBaseInfo, aDisclaimer]);
-        tabs = tabs.concat([divBaseInfo, divDisclaimer]);
-    }
-    
-    for (var i in anchors)
-        anchors[i].className = "tabHeader";
-
-    anchor.className = "tabHeader tabHeaderSelected";
-        
-    for (var i in tabs)
-        tabs[i].style.display = "none";
-    
-    tab.style.display = "";
-    
-    if (tab.onShow)
-        tab.onShow();
-    
-}
-
-function onVicinityMapShow()
-{
-    VicinityMap.map.invalidateSize();
-}
-
+/*
 function onApartmentMapShow()
 {
     ApartmentMap.resize();
     ApartmentMap.render(mapApartment.localToPixelCoordinates( Controller.localPosition ));
-}
+}*/
 
-
-var daysPerMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-
-function getDayString(dayOfYear)
-{
-    var day = ((dayOfYear % 366) | 0)+1;
-    var monthNames = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
-    
-    for (var month = 0; day > daysPerMonth[month]; month++)
-        day -= daysPerMonth[month];
-        
-    return "" + day + ". " + monthNames[month];
-}
-
-function getDayOfYear(date)
-{
-    var month = date.getMonth();        //Note the JavaScript Date API is 0-based for the getMonth(),
-    var dayOfYear = date.getDate()-1;   //but 1-based for getDate()
-    
-    for (var i = 0; i < month; i++)
-        dayOfYear += daysPerMonth[i];
-
-    //for now, we just ignore leap years altogether        
-    //var year = date.getFullYear();
-    //var isLeapYear =  (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0));
-    
-    //in a leap year, every day after February 28th is one day further from the beginning of that year than normal
-    //if (isLeapYear && dayOfYear > daysPerMonth[0] + daysPerMonth[1])
-    //    dayOfYear += 1;
-        
-    return dayOfYear;
-}
 
 function onSunPositionChanged(day, time)
 {
@@ -258,7 +185,7 @@ function onSunPositionChanged(day, time)
     $( "#slider-time" ).slider("option", "min", riseTime);
     $( "#slider-time" ).slider("option", "max", setTime);
     
-    lblDay.textContent = getDayString(day);
+    lblDay.textContent = Helpers.getDayString(day);
     var hour = time | 0;
     var minute = ""+ ((time - hour)*60).toFixed(0);
     while (minute.length < 2) 
@@ -331,28 +258,35 @@ function init()
     }
     req.send();
 
-    mqSaveSpace.addListener(onLayoutChange);
-    onLayoutChange();
+	var tmp = new FullScreenButton( btnFullScreen, 
+	    {target:dummy, 
+	    icon:       "images/ic_action_full_screen.png",
+	    returnIcon: "images/ic_action_return_from_full_screen.png"});
+
+    var toolbarEntries = [
+        {icon: "images/ic_action_map.png", target:mapDiv, onShow:function(){VicinityMap.onChangeSize(); }},
+        {icon: "images/ic_action_place.png", target:minimapCanvas, onShow:ApartmentMap.resize.bind(ApartmentMap)},
+        {icon: "images/ic_action_sun_position.png",target: divSunPos},
+        {icon: "images/ic_action_details.png", target:divDetails},
+        {icon: "images/ic_action_help.png", target:divUsageNotes}];
+              
+    if (!glu.performShadowMapping)
+        delete toolbarEntries[2];
+    
+    
+
+    var tmp2 = new ToolWindowBar( toolbarDiv, {
+        windows: toolbarEntries
+    });
 }   
 
 function onLayoutChange()
 {
-    if (mqSaveSpace.matches)
+/*    if (mqSaveSpace.matches)
     {
-        aDisclaimer.style.display = "initial";
-        aBaseInfo.style.display = "initial";
-        divNavContainer.insertBefore(divBaseInfo, divSunPos);
-        divNavContainer.insertBefore(divDisclaimer, divSunPos);
     } else
     {
-        aDisclaimer.style.display = "none";
-        aBaseInfo.style.display = "none";
-        divNavContainer.insertBefore(divBaseInfo, hFurtherInfo);
-        contentDiv.appendChild(divDisclaimer);
-        divBaseInfo.style.display = "initial";
-        divDisclaimer.style.display= "initial";
-    }
-    onTabClicked( aLayout, divLayout);
+    }*/
 }
 
 
@@ -440,15 +374,16 @@ function onResize()
      *   - Canvas.height sets the logical size of the drawing buffer is pixels (its content is later scaled to fit the object on screen)
      *   - Canvas.clientHeight is the read-only value of the consequence of Canvas.style.height in pixels (even if style.height is given in percent, etc.)
      */	    
-    if (window.matchMedia( "(orientation: landscape)" ).matches )
-        webGlCanvas.style.height = webGlCanvas.clientWidth / 16 * 9 + "px";
-    else 
-        webGlCanvas.style.height = "100%";
-    webGlCanvas.height = webGlCanvas.clientHeight;// / 2;
-    webGlCanvas.width  = webGlCanvas.clientWidth;// / 2;
+//    if (window.matchMedia( "(orientation: landscape)" ).matches )
+//        webGlCanvas.style.height = webGlCanvas.clientWidth / 16 * 9 + "px";
+//    else 
+//        webGlCanvas.style.height = "100%";
 
 
-    ApartmentMap.resize();
+    webGlCanvas.height = webGlCanvas.clientHeight / 2;
+    webGlCanvas.width  = webGlCanvas.clientWidth / 2;
+
+
     
     scheduleFrameRendering();
 }	
