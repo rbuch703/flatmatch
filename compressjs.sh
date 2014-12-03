@@ -19,5 +19,6 @@ java -jar ~/Downloads/ClosureCompiler/compiler.jar --js_output_file combined.js 
     skydome.js      \
     sun.js          \
     tile.js         \
-    vicinityMap.js
+    vicinityMap.js  \
+    uiElements.js
 

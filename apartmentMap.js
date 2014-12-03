@@ -34,8 +34,8 @@ var ApartmentMap = (function(){
 
         var pos = canvas.getBoundingClientRect();
 
-        var x = (ev.clientX - pos.x)  / canvasScale;
-        var y = (ev.clientY - pos.y)  / canvasScale;
+        var x = (ev.clientX - pos.left)  / canvasScale;
+        var y = (ev.clientY - pos.top)  / canvasScale;
     
         if (onClick)
             onClick(x, y);
