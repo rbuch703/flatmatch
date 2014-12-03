@@ -5,47 +5,33 @@
  */
 function Buildings(gl, position)
 {
-
     if (!gl)
         return;
     this.mapCenter = position;//{lat:52.13850380245244, lng:11.64003610610962};
 
-    var earthCircumference = 2 * Math.PI * (6378.1 * 1000);
-    var physicalTileLength = earthCircumference* Math.cos(position.lat/180*Math.PI) / Math.pow(2, /*zoom=*/19);
+    this.windowTexture = glu.createTextureFromBytes( new Uint8Array([255, 255, 255]) );
+    gl.bindTexture(gl.TEXTURE_2D, this.windowTexture);
+    //to allow tiling of windows
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
 
-    var numTilesPer500m = 500 / physicalTileLength * 2; //HACK: increase radius to 1km
-
-    var x = long2tile(position.lng,19);
-    var y = lat2tile( position.lat,19);
-    
-    
-    var lng_min = tile2long(x - numTilesPer500m, 19);
-    var lng_max = tile2long(x + numTilesPer500m, 19);
-    
-    var lat_min = tile2lat( y + numTilesPer500m, 19);
-    var lat_max = tile2lat( y - numTilesPer500m, 19);
-
-    //var query = '[out:json][timeout:25];way["building"]('+lat_min+","+lng_min+","+lat_max+","+lng_max+');out body;>;out skel qt;';
-    var bbox = '('+lat_min+","+lng_min+","+lat_max+","+lng_max+')';
-    
-    
-    var query = '[out:json][timeout:25];(way["building"]'+bbox+
-                                       ';way["building:part"]'+bbox+
-                                       ';relation["building"]'+bbox+');out body;>;out skel qt;';
-
+    var image = new Image();
     var bldgs = this;
-    var oReq = new XMLHttpRequest();
-    oReq.onload = function() { bldgs.onDataLoaded(this); }
-    oReq.open("get", Buildings.apiBaseUrl + "?data=" + encodeURIComponent(query), true);
-    oReq.send();
-    
-
+    image.onload = function() 
+    {
+        glu.updateTexture( bldgs.windowTexture, image);
+        
+        if (Controller.onRequestFrameRender)
+            Controller.onRequestFrameRender();
+    };
+    image.src = "images/window.png";
     this.numVertices = 0;
     this.numEdgeVertices = 0;
+
+    this.requestGeometry(position);
 }    
 
 Buildings.apiBaseUrl = "http://overpass-api.de/api/interpreter";
-//Buildings.apiBaseUrl = "http://tile.rbuch703.de/api/interpreter";
 
 function vec(a) { return [a.dx, a.dy];}
 
@@ -134,10 +120,84 @@ function isClockwise(outline)
     return det > 0;
 }
 
+Buildings.prototype.requestGeometry = function(position)
+{
+    var RADIUS = 1000;  //half-width of the bounding box around the position for which to download building data
+    var latInRadiants = position.lat/180*Math.PI;
+    var dLat = RADIUS                             /Helpers.getEarthCircumference() * 360;
+    var dLng = (RADIUS/ Math.cos(latInRadiants) ) /Helpers.getEarthCircumference() * 360;
 
-/* in the osm3s response, nodes are individual entities with lon/lat properties, and ways refer to these nodes
+    var lng_min = position.lng - dLng;
+    var lng_max = position.lng + dLng;
+
+    var lat_min = position.lat - dLat;
+    var lat_max = position.lat + dLat;
+
+    //var query = '[out:json][timeout:25];way["building"]('+lat_min+","+lng_min+","+lat_max+","+lng_max+');out body;>;out skel qt;';
+    var bbox = '('+lat_min+","+lng_min+","+lat_max+","+lng_max+')';
+    
+    
+    var query = '[out:json][timeout:25];(way["building"]'+bbox+
+                                       ';way["building:part"]'+bbox+
+                                       ';relation["type"="multipolygon"]["building"]'+bbox+
+                                       ';relation["type"="building"]'+bbox+
+                                       ');out body;>;out skel qt;';
+
+    var bldgs = this;
+    var oReq = new XMLHttpRequest();
+    oReq.onload = function() { bldgs.onDataLoaded(this); }
+    oReq.open("get", Buildings.apiBaseUrl + "?data=" + encodeURIComponent(query), true);
+    oReq.send();
+
+}
+
+Buildings.prototype.shiftGeometry = function(newPosition)
+{
+    var dLat = newPosition.lat - this.mapCenter.lat;
+    var dLng = newPosition.lng - this.mapCenter.lng;
+    var avgLat = (newPosition.lat + this.mapCenter.lat) / 2.0;
+    this.mapCenter = newPosition;
+    
+    if (dLat > 1 || dLng > 1)   //distance too far for the old geometry to still be visible --> just don't display anything
+    {
+        this.numVertices = 0;
+        this.numEdgeVertices = 0;
+        return;
+    }
+    
+    var dy = dLat/360 * Helpers.getEarthCircumference();
+    var dx = dLng/360 * Helpers.getEarthCircumference() * Math.cos( avgLat / 180 * Math.PI);
+    //console.log("delta: %s, %s", dx, dy);
+    
+    for (var i = 0; i < this.verticesRaw.length; i+=3)
+    {
+        this.verticesRaw[i  ] -= dx;
+        this.verticesRaw[i+1] += dy;
+    }
+    
+    if (this.vertices) 
+        gl.deleteBuffer(this.vertices);
+        
+    this.vertices = glu.createArrayBuffer(this.verticesRaw);
+
+    for (var i = 0; i < this.edgeVerticesRaw.length; i+=3)
+    {
+        this.edgeVerticesRaw[i  ] -= dx;
+        this.edgeVerticesRaw[i+1] += dy;
+    }
+
+    if (this.edgeVertices) 
+        gl.deleteBuffer(this.edgeVertices);
+        
+    this.edgeVertices = glu.createArrayBuffer(this.edgeVerticesRaw);
+    
+    //this.edgeVerticesRaw
+    //this.mapCenter
+}
+
+/* in the osm3s response, nodes are individual entities with lat/lng properties, and ways refer to these nodes
    via their id. This function removes that indirection by replacing the node ids in the way by the actual node
-   lon/lat data
+   lat/lng data
 */
 Buildings.integrateNodeData = function(nodes, ways) {
     for (var i in ways)
@@ -146,10 +206,8 @@ Buildings.integrateNodeData = function(nodes, ways) {
 
         for (var j in way.nodes)
         {
-            //var id = ;
             if (way.nodes[j] in nodes)
                 way.nodes[j] = nodes[way.nodes[j]];
-                //building.outline.push( nodes[id]);
             else
             {
                 delete way.nodes[j];
@@ -163,21 +221,23 @@ Buildings.integrateWays = function(ways, relations) {
     for (var i in relations)
     {
         var rel = relations[i];
+        if (rel.tags.type != "multipolygon")
+            continue;
+
 
         for (var j in rel.members)
         {
             var member = rel.members[j];
             if (member.type != "way")
                 continue;
-            
+
             if (member.ref in ways)
             {
-                /* way will not be handled as an explicit way, but as a part of the relation -> delete it.
+                /* way will not be handled as an explicit way, but as a part of a multipolygon -> delete it.
                  * Flag it first (instead of deleting it right away) as several relations may
                  * refer to the same way.
                  */
                 ways[member.ref].partOfRelation = true;   
-
                 member.ref = ways[member.ref];
             }
             else
@@ -223,7 +283,7 @@ Buildings.splitResponse = function(response)
         }
         else if (el.type == "relation")
         {
-            if (! (el.id in relations) || (( "tags" in el) && (! ("tags" in relations[el.id]))))
+            if (! (el.id in relations) || (( el.tags != undefined) && (relations[el.id].tags === undefined)))
                 relations[el.id] = el;
         }
         else
@@ -231,6 +291,19 @@ Buildings.splitResponse = function(response)
             console.log("Unknown element '" + el.type + "' in %o, skipping", el);
         }
     }
+
+    for (var i in ways)
+    {
+        if (ways[i].tags === undefined)
+            ways[i].tags = {};
+    }
+    
+    for (var i in relations)
+    {
+        if (relations[i].tags === undefined)
+            relations[i].tags = {};
+    }
+    
     return [nodes, ways, relations];
 }
 
@@ -300,32 +373,40 @@ Buildings.joinWays = function(w1, w2) {
 */
 Buildings.mergeMultiPolygonSegments = function(rel, setOfRelations) {
 
+    if (rel.tags.type != "multipolygon")
+    {
+        console.log("[ERROR] attempt to merge multipolygon segments in relation %s that is not a multipolygon", rel.id);
+        return;
+    }
     //var rel = relations[i];
     rel.outlines = [];
     
     var currentOutline = null;
     for (var j in rel.members)
     {
-        if (rel.members[j].type != "way")
+        var member = rel.members[j];
+        if (member.type == "node")
+            continue;
+
+        if (member.type == "relation")
         {
-            if (rel.members[j].type == "node")
-                continue;
-            if (rel.members[j].type == "relation")
+            //console.log("rel: %o", rel);
+            var childRel = setOfRelations[member.ref];
+            if (!childRel)
             {
-                //console.log("rel: %o", rel);
-                var childRel = setOfRelations[rel.members[j].ref];
-                if (!childRel)
-                {
-                    console.log("[WARN] non-existent sub-relation %s of relation %s", rel.members[j].ref, rel.id);
-                    continue;
-                }
-                //console.log("childRel: %o", childRel)
-                if ((! ("tags" in childRel)) || (!("building" in childRel.tags || "building:part" in childRel.tags)))
-                    console.log("[WARN] found sub-relation in %s that not itself a building(:part), ignoring", rel.id);
-                
+                console.log("[WARN] non-existent sub-relation %s of relation %s", member.ref, rel.id);
                 continue;
-            } 
-            console.log("[WARN] invalid member type '%s' on relation %s", rel.members[j].type, rel.id);
+            }
+            //console.log("childRel: %o", childRel)
+            if ((! ("tags" in childRel)) || (!("building" in childRel.tags || "building:part" in childRel.tags)))
+                console.log("[WARN] found sub-relation in %s that not itself a building(:part), ignoring", rel.id);
+            
+            continue;
+        } 
+        
+        if (member.type != "way")
+        {
+            console.log("[WARN] invalid member type '%s' on relation %s", member.type, rel.id);
             continue;
         }
 
@@ -390,7 +471,8 @@ Buildings.mergeMultiPolygonSegments = function(rel, setOfRelations) {
 
 //distributes the attributes that a relation may have, but its members may not, to these members
 Buildings.distributeAttributes = function(rel) {
-    var important_tags = ["building:levels", "roof:levels", "building:min_level", "height", "min_height"];
+    var important_tags = ["building:levels", "roof:levels", "building:min_level", "height", "min_height", 
+                          "building:colour", "building:color", "roof:colour", "roof:color"];
 
 
     if (! ("tags" in rel))
@@ -418,6 +500,22 @@ Buildings.distributeAttributes = function(rel) {
     }
 }
 
+Buildings.sanitizeTags = function(tags, src) {
+    //console.log("%o", tags);
+    if ("building:height" in tags && !("height" in tags))
+    {
+        console.log("[INFO] depricated tag 'building:height' in %s %s", src.type, src.id);
+        tags.height = tags["building:height"];
+        delete tags["building:height"];
+    }
+    
+    if ("building:min_height" in tags && !("min_height" in tags))
+    {
+        console.log("[INFO] depricated tag 'building:min_height' in %s %s", src.type, src.id);
+        tags.height = tags["building:min_height"];
+        delete tags["building:min_height"];
+    }    
+}
 
 Buildings.parseOSMQueryResult = function(res) {
 
@@ -425,7 +523,30 @@ Buildings.parseOSMQueryResult = function(res) {
     var nodes = res[0];
     var ways = res[1];
     var relations = res[2];
-    
+
+    // remove outline relations and ways. Those are present in the OSM data for the sole purpose of 2D rendering,
+    // when there is additional 3D geometry superseeding it.
+    for (var i in relations)
+    {
+        Buildings.sanitizeTags(relations[i].tags, relations[i]);
+        if (relations[i].tags.type != "building")
+            continue;
+            
+        for (var j in relations[i].members)
+        {
+            var member = relations[i].members[j];
+            
+            if (member.role != "outline")
+                continue;
+                
+            if (member.type === "way")
+                delete ways[member.ref];
+
+            if (member.type === "relation")
+                delete relations[member.ref];
+        }
+    }
+
     Buildings.integrateNodeData(nodes, ways);
     Buildings.integrateWays(ways, relations);
     //console.log("Nodes: %o,\nWays: %o,\nRelations: %o", nodes, ways, relations);
@@ -437,15 +558,26 @@ Buildings.parseOSMQueryResult = function(res) {
     for (var i in relations)
     {
         var rel = relations[i];
+        if (rel.tags.type != "multipolygon")
+			continue;
+
+        
         Buildings.mergeMultiPolygonSegments( rel, relations );
         Buildings.distributeAttributes( rel );
         
         for (var j in rel.outlines)
             outlines.push( rel.outlines[j].ref);
     }
-    
+
     for (var i in ways)
-        outlines.push(ways[i]);
+    {
+        Buildings.sanitizeTags(ways[i].tags, ways[i]);
+
+        if ( "building" in ways[i].tags || "building:part" in ways[i].tags )
+        {
+            outlines.push(ways[i]);
+        }
+    }
     
     //console.log(relations);
     //console.log(outlines);
@@ -463,6 +595,7 @@ Buildings.prototype.onDataLoaded = function(response) {
     outlines = convertToLocalCoordinates(outlines, this.mapCenter);
     for (var i in outlines)
     {
+
         simplifyOutline(outlines[i]);
         if (isClockwise(outlines[i]))
         {
@@ -510,6 +643,8 @@ function triangulate(outline)
 }
 
 function getLengthInMeters(len_str) {
+    len_str = len_str.replace(",", "."); //workaround for lengths with the wrong decimal seperator
+
     // matches a float (including optional fractional part and optional 
     // exponent) followed by an optional unit of measurement
     var re = /^((\+|-)?\d+(\.\d+)?((e|E)-?\d+)?)\s*([a-zA-Z]*)?$/;
@@ -538,24 +673,62 @@ function getLengthInMeters(len_str) {
     return val;
 }
 
+
+Buildings.toneDownColor = function(col, fac, brighten)
+{
+    var l = 0.2126 * col[0] + 0.7152 * col[1] + 0.0722 * col[2];   //luminance
+    if (brighten)
+        l += 0.25;
+    return [ (1-fac)*col[0] + fac*l,
+              (1-fac)*col[1] + fac*l,
+              (1-fac)*col[2] + fac*l];
+}
+
+
+Buildings.interpretColor = function(col, defaultColor)
+{
+    if (col === undefined)
+        return defaultColor;
+        
+    var hexColor = Helpers.getColor(col);
+    if (hexColor) 
+        col = hexColor;
+    
+    var re = new RegExp("^#([a-fA-F0-9]{6})$");   //a hash sign followed by exactly six hexadecimal characters
+    var m = col.match(re)
+    if (m)
+    {
+        col = m[1]; //m[0] returns the whole matched string, m[1] only the submatch in the first set of parentheses
+        //console.log(col);
+        var r = parseInt("" + col[0] + col[1], 16)/255.0;
+        var g = parseInt("" + col[2] + col[3], 16)/255.0;
+        var b = parseInt("" + col[4] + col[5], 16)/255.0;
+        return Buildings.toneDownColor([r, g, b], 0.5, true);
+    }
+    
+
+    return defaultColor;
+}
+
 Buildings.prototype.buildGlGeometry = function(outlines) {
     if (!gl)
         return;
         
         
-    this.vertices= [];
-    this.texCoords=[];
-    this.normals  =[];
-    this.edgeVertices = [];
+    var vertices= [];
+    var vertexColors= [];
+    var texCoords=[];
+    var normals  =[];
+    var edgeVertices = [];
     
-    var vertexArrays = [];
-    var texCoordArrays = [];
-
     for (var i in outlines)
     {
         var bldg = outlines[i];
         if (! ("tags" in bldg))
             bldg.tags = {};
+            
+        //if ("building:colour" in bldg.tags)
+        //    console.log("building with color %s", bldg.tags["building:colour"]);
 
         if ("height" in bldg.tags)
             bldg.height = getLengthInMeters(bldg.tags.height);
@@ -582,9 +755,36 @@ Buildings.prototype.buildGlGeometry = function(outlines) {
         //console.log("Height is %s", bldg.height);
         var height = (!(bldg.height === undefined)) ? bldg.height : 10;
         var hf = (!(bldg.height === undefined)) ? 1 : 0;
+        
+        var vDist = height - bldg.min_height;
+        var numLevels = Math.floor( vDist/3.5);
+        if (bldg.tags["building:levels"] != undefined)
+        {
+            numLevels = bldg.tags["building:levels"] | 0;
+            if (bldg.tags["roof:levels"] != undefined)
+                numLevels += bldg.tags["roof:levels"];
+        }
 
         if (bldg.nodes[0].dx != bldg.nodes[bldg.nodes.length-1].dx || bldg.nodes[0].dy != bldg.nodes[bldg.nodes.length-1].dy)
             console.log("[WARN] outline of building %s does not form a closed loop (%o)", i, bldg);
+        
+        bldg.color = [0.8, 0.8, 0.8];
+        bldg.roofColor = [0.8, 0.8, 0.8];
+        
+        //use incorrect tag name first, overwrite with correct one if it exists
+        bldg.color = Buildings.interpretColor(bldg.tags["building:color"], bldg.color);
+        bldg.color = Buildings.interpretColor(bldg.tags["building:colour"], bldg.color);    
+
+        bldg.roofColor = Buildings.interpretColor(bldg.tags["roof:color"], bldg.roofColor);
+        bldg.roofColor = Buildings.interpretColor(bldg.tags["roof:colour"], bldg.roofColor);    
+        
+        
+        if (bldg.height === undefined)
+        {
+            bldg.color = [0.9, 0.6, 0.6];
+            bldg.roofColor=[0.9, 0.6, 0.6];
+        }
+
         
         //step 1: build geometry for walls;
         for (var j = 0; j < bldg.nodes.length - 1; j++) //loop does not include the final vertex, as we in each case access the successor vertex as well
@@ -599,6 +799,7 @@ Buildings.prototype.buildGlGeometry = function(outlines) {
             var dx = bldg.nodes[j+1].dx - bldg.nodes[j].dx;
             var dy = bldg.nodes[j+1].dy - bldg.nodes[j].dy;
 
+            var hDist = Math.floor(Math.sqrt(dx*dx+dy*dy) / 2.0);
             var N = norm3( [dy, -dx, 0] );
             // D-C
             // |/|
@@ -608,16 +809,19 @@ Buildings.prototype.buildGlGeometry = function(outlines) {
             //flatten array of 3-element-arrays to a single array
             //var coords = [].concat.apply([], [A, B, C, A, C, D]);
             var coords = [].concat(A, B, C, A, C, D);
-            this.vertices.push.apply(this.vertices, coords);
+            [].push.apply(vertices, coords);
             
-            var tc = [0,0,hf, 1,0,hf, 1,1,hf, 0,0,hf, 1,1,hf, 0,1,hf];
-            this.texCoords.push.apply( this.texCoords, tc); //this 'hack' is way faster than concat()
+            var colors = [].concat(bldg.color, bldg.color, bldg.color, bldg.color, bldg.color, bldg.color);
+            [].push.apply( vertexColors, colors);
+            
+            var tc = [0,0,   hDist,0,   hDist,numLevels,   0,0,   hDist,numLevels,   0,numLevels];
+            [].push.apply( texCoords, tc); //this 'hack' is way faster than concat()
             
             var norms = [].concat(N,N,N,N,N,N);
-            this.normals.push.apply( this.normals, norms);
+            [].push.apply( normals, norms);
             
-            var edgeVertices = [].concat(A, D, B, C, A, B, D, C);
-            this.edgeVertices.push.apply(this.edgeVertices, edgeVertices);
+            var edgeVerts = [].concat(A, D, B, C, A, B, D, C);
+            [].push.apply(edgeVertices, edgeVerts);
             
         }
         
@@ -637,9 +841,10 @@ Buildings.prototype.buildGlGeometry = function(outlines) {
         {
             for (var j = 0; j < coords.length; j+=2)
             {
-                this.vertices.push(coords[j], coords[j+1], min_height);
-                this.texCoords.push(0.5, 0.5,hf);
-                this.normals.push( 0,0,-1 ); //floor --> normal is pointing straight down
+                [].push.apply(vertexColors, bldg.color);
+                vertices.push(coords[j], coords[j+1], min_height);
+                texCoords.push(0.0, 0.0);
+                normals.push( 0,0,-1 ); //floor --> normal is pointing straight down
             }
 
         }
@@ -654,22 +859,40 @@ Buildings.prototype.buildGlGeometry = function(outlines) {
         for (var j = 0; j < coords.length; j+=6)
         {
         
-            this.vertices.push(coords[j], coords[j+1], height);
-            this.vertices.push(coords[j+4], coords[j+5], height);   //order reversed to change orientation
-            this.vertices.push(coords[j+2], coords[j+3], height);
+            vertices.push(coords[j], coords[j+1], height);
+            vertices.push(coords[j+4], coords[j+5], height);   //order of vertices reversed to change orientation
+            vertices.push(coords[j+2], coords[j+3], height);
 
-            this.texCoords.push(0.5, 0.5,hf,  0.5, 0.5,hf,  0.5, 0.5,hf);
-            this.normals.push( 0,0,1,  0,0,1,  0,0,1 ); //roof --> normal is pointing straight up
-        }        
+            var colors = [].concat(bldg.roofColor, bldg.roofColor, bldg.roofColor);
+            [].push.apply( vertexColors, colors);
+
+
+            texCoords.push(0.5, 0.5,  0.5, 0.5,  0.5, 0.5);
+            normals.push( 0,0,1,  0,0,1,  0,0,1 ); //roof --> normal is pointing straight up
+        }
     }
-    this.numVertices = this.vertices.length/3.0;    // 3 coordinates per vertex
-    this.numEdgeVertices = this.edgeVertices.length/3.0;
-    console.log("'Buildings' total to %s faces and %s edges", this.numVertices/3, this.numEdgeVertices/2);
-
-    this.vertices = glu.createArrayBuffer(this.vertices);
-    this.texCoords= glu.createArrayBuffer(this.texCoords);
-    this.normals  = glu.createArrayBuffer(this.normals);
-    this.edgeVertices = glu.createArrayBuffer(this.edgeVertices);
+    if (this.vertices)     gl.deleteBuffer(this.vertices);
+    if (this.vertexColors) gl.deleteBuffer(this.vertexColors);
+    if (this.texCoords)    gl.deleteBuffer(this.texCoords);
+    if (this.normals)      gl.deleteBuffer(this.normals);
+    if (this.edgeVertices) gl.deleteBuffer(this.edgeVertices);
+    
+    this.numVertices = vertices.length/3.0;    // 3 coordinates per vertex
+    this.numEdgeVertices = edgeVertices.length/3.0;
+    console.log("[INFO] 'Buildings' total to %s faces, and %s edges", this.numVertices/3, this.numEdgeVertices/2);
+    this.vertices = glu.createArrayBuffer(vertices);
+    this.vertexColors = glu.createArrayBuffer(vertexColors);
+    this.texCoords= glu.createArrayBuffer(texCoords);
+    this.normals  = glu.createArrayBuffer(normals);
+    this.edgeVertices = glu.createArrayBuffer(edgeVertices);
+    
+    /* Store vertex positions in an array accesible by JavaScript, in addition to the GL vertex buffers.
+     * When a new map position is selected, the existing geometry needs to be shifted to correspond to that new position.
+     * For this to work, the vertex positions have to be modifiable by Javascript, which the GL vertex buffers are not.
+     * Shifting the geometry does not require modification of the texCoords, colors or normals, so those are not backup up.
+     */
+    this.verticesRaw = vertices;
+    this.edgeVerticesRaw = edgeVertices;
 }
 
 Buildings.prototype.renderDepth = function(modelViewMatrix, projectionMatrix) {
@@ -686,7 +909,7 @@ Buildings.prototype.renderDepth = function(modelViewMatrix, projectionMatrix) {
     gl.cullFace(gl.FRONT);
 
 	gl.useProgram(Shaders.depth);   //    Install the program as part of the current rendering state
-	gl.enableVertexAttribArray(Shaders.depth.locations.vertexPosition); // setup vertex coordinate buffer
+	glu.enableVertexAttribArrays(Shaders.depth);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertices);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
 	gl.vertexAttribPointer(Shaders.depth.locations.vertexPosition, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
@@ -702,7 +925,7 @@ Buildings.prototype.renderDepth = function(modelViewMatrix, projectionMatrix) {
     gl.drawArrays(gl.TRIANGLES, 0, this.numVertices);    
 
     gl.cullFace(gl.BACK);   //reset to normal behavior
-
+    glu.disableVertexAttribArrays(Shaders.depth);
 }
 
 
@@ -712,15 +935,19 @@ Buildings.prototype.render = function(modelViewMatrix, projectionMatrix) {
         
     //draw faces
 	gl.useProgram(Shaders.building);   //    Install the program as part of the current rendering state
-	gl.enableVertexAttribArray(Shaders.building.locations.vertexPosition); // setup vertex coordinate buffer
-	gl.enableVertexAttribArray(Shaders.building.locations.vertexTexCoords); //setup texcoord buffer
-	gl.enableVertexAttribArray(Shaders.building.locations.vertexNormal); //setup texcoord buffer
+    glu.enableVertexAttribArrays(Shaders.building);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertices);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
 	gl.vertexAttribPointer(Shaders.building.locations.vertexPosition, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
     
 	gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoords);
-	gl.vertexAttribPointer(Shaders.building.locations.vertexTexCoords, 3, gl.FLOAT, false, 0, 0);  //assigns array "texCoords" bound above as the vertex attribute "vertexTexCoords"
+	gl.vertexAttribPointer(Shaders.building.locations.vertexTexCoords, 2, gl.FLOAT, false, 0, 0);  //assigns array "texCoords" bound above as the vertex attribute "vertexTexCoords"
+
+    if (Shaders.building.locations.vertexColorIn > -1)
+    {
+	    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexColors);
+	    gl.vertexAttribPointer(Shaders.building.locations.vertexColorIn, 3, gl.FLOAT, false, 0, 0);
+	}
 
     // can apparently be -1 if the variable is not used inside the shader
     if (Shaders.building.locations.vertexNormal > -1)
@@ -733,14 +960,13 @@ Buildings.prototype.render = function(modelViewMatrix, projectionMatrix) {
     mat4.mul(mvpMatrix, projectionMatrix, modelViewMatrix);
 
     gl.uniform1i(Shaders.building.locations.tex, 0); //select texture unit 0 as the source for the shader variable "tex" 
+    gl.activeTexture(gl.TEXTURE0);  //successive commands (here 'gl.bindTexture()') apply to texture unit 0
+    gl.bindTexture(gl.TEXTURE_2D, this.windowTexture); //render geometry without texture
+
 	gl.uniformMatrix4fv(Shaders.building.locations.modelViewProjectionMatrix, false, mvpMatrix);
 
     var pos = Controller.localPosition;
-    //console.log(pos.x, pos.y, pos.z);
     gl.uniform3f(Shaders.building.locations.cameraPos, pos.x, pos.y, pos.z);
-
-    //gl.activeTexture(gl.TEXTURE0);  //successive commands (here 'gl.bindTexture()') apply to texture unit 0
-    //gl.bindTexture(gl.TEXTURE_2D, null); //render geometry without texture
     
     gl.enable(gl.POLYGON_OFFSET_FILL);  //to prevent z-fighting between rendered edges and faces
     gl.polygonOffset(1,1);
@@ -748,12 +974,12 @@ Buildings.prototype.render = function(modelViewMatrix, projectionMatrix) {
     gl.drawArrays(gl.TRIANGLES, 0, this.numVertices);
 
     gl.disable(gl.POLYGON_OFFSET_FILL);
-    // ===
+    glu.disableVertexAttribArrays(Shaders.building);
     
-
+    // ===
     //step 2: draw outline
     gl.useProgram(Shaders.flat);   //    Install the program as part of the current rendering state
-	gl.enableVertexAttribArray(Shaders.flat.locations.vertexPosition); // setup vertex coordinate buffer
+	glu.enableVertexAttribArrays(Shaders.flat);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.edgeVertices);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
 	gl.vertexAttribPointer(Shaders.flat.locations.vertexPosition, 3, gl.FLOAT, false, 0, 0);  //assigns array "edgeVertices" bound above as the vertex attribute "vertexPosition"
@@ -765,6 +991,8 @@ Buildings.prototype.render = function(modelViewMatrix, projectionMatrix) {
 	gl.uniform4fv( Shaders.flat.locations.color, [0.2, 0.2, 0.2, 1.0]);
 
     gl.drawArrays(gl.LINES, 0, this.numEdgeVertices);
+
+	glu.disableVertexAttribArrays(Shaders.flat); // cleanup
     
 }
 
@@ -772,22 +1000,20 @@ Buildings.prototype.render = function(modelViewMatrix, projectionMatrix) {
 /* converts 'buildings' global coordinates (lat/lon) to local distances (in m) from mapCenter*/
 function convertToLocalCoordinates(buildings,  mapCenter)
 {
-    var y0 = lat2tile(mapCenter.lat, 19);
-    var x0 = long2tile(mapCenter.lng, 19);
-
-    var earthCircumference = 2 * Math.PI * (6378.1 * 1000);
-    var physicalTileLength = earthCircumference* Math.cos(mapCenter.lat/180*Math.PI) / Math.pow(2, /*zoom=*/19);
-
+    var circumference  = Helpers.getEarthCircumference();
+    var lngScale = Math.cos( mapCenter.lat / 180 * Math.PI);
+    
     for (var i in buildings)
     {
         var bld = buildings[i];
+    
         for (var j = 0; j < bld.nodes.length; j++)
         {
-            var y = lat2tile(bld.nodes[j].lat, 19);
-            var x = long2tile(bld.nodes[j].lon, 19);
-            
-            bld.nodes[j].dx = (x - x0) * physicalTileLength;
-            bld.nodes[j].dy = (y - y0) * physicalTileLength;
+            var dLat = bld.nodes[j].lat - mapCenter.lat;
+            var dLng = bld.nodes[j].lon - mapCenter.lng;
+
+            bld.nodes[j].dx = dLng / 360 * circumference * lngScale;
+            bld.nodes[j].dy = -dLat / 360 * circumference;
         }
     }
     return buildings;

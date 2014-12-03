@@ -4,19 +4,23 @@ var VicinityMap = {
     
     init: function(div, lat, lng)
     {
-        //console.log(lat, lng);
-        VicinityMap.map = L.map(div, {keyboard:false} ).setView([lat, lng], 18);
-        VicinityMap.map.on("click", VicinityMap.onMapClick);
-        VicinityMap.map.on("zoomend", VicinityMap.renderFrustum);
+        if (!VicinityMap.map)
+        {
+            //console.log(lat, lng);
+            VicinityMap.map = L.map(div, {keyboard:false} );
+            VicinityMap.map.on("click", VicinityMap.onMapClick);
+            VicinityMap.map.on("zoomend", VicinityMap.renderFrustum);
 
-        L.tileLayer('http://{s}.tile.rbuch703.de/tiles/mipmap/{z}/{x}/{y}.png', {
-            attribution: 'OpenStreetMap',
-            maxZoom: 19, minZoom:0,
-            zoomOffset: -1,
-            tileSize:512
-        }).addTo(VicinityMap.map);
+            L.tileLayer('http://{s}.tile.rbuch703.de/tiles/mipmap/{z}/{x}/{y}.png', {
+                attribution: 'OpenStreetMap',
+                maxZoom: 19, minZoom:0,
+                zoomOffset: -1,
+                tileSize:512
+            }).addTo(VicinityMap.map);
 
-        L.control.scale({imperial:false, position:"topright"}).addTo(VicinityMap.map);
+            L.control.scale({imperial:false, position:"topright"}).addTo(VicinityMap.map);
+        }
+        VicinityMap.map.setView([lat, lng], 18)
     },
 
     updatePositionMarker: function(newPos)
@@ -76,26 +80,9 @@ var VicinityMap = {
 	    VicinityMap.frustum = L.polygon(line, {color: 'red', noClip: 'true', fillColor:"white", fillOpacity:0.4}).addTo(VicinityMap.map);
 	},
 
-    onMapClick: function(e)
+    onChangeSize: function()
     {
-        /*var dLat = e.latlng.lat - Controller.position.lat;
-        var dLng = e.latlng.lng - Controller.position.lng;
-
-        var earthCircumference = 2 * Math.PI * (6378.1 * 1000);
-        var metersPerDegreeLat = earthCircumference / 360;
-        var metersPerDegreeLng = metersPerDegreeLat * Math.cos( Controller.position.lat / 180 * Math.PI);
-        
-        var dx = dLng * metersPerDegreeLng - Controller.localPosition.x;
-        var dy = dLat * metersPerDegreeLat - Controller.localPosition.y;
-        var dYaw = -(Math.atan2(dy, dx) / Math.PI * 180 - 90);
-        //console.log(e.latlng.lat, e.latlng.lng, dYaw);
-        yawLog.innerHTML = "./setApartmentYaw.py " + rowId + " " + dYaw.toFixed(1);
-        posLog.innerHTML = "./setApartmentPosition.py " + rowId + " " + e.latlng.lat + " " + e.latlng.lng;
-        */
-        
-        /*Controller.position = e.latlng;
-        onChangeLocation();*/
-    }   
-
+        VicinityMap.map.invalidateSize(false);
+    }
 
 }

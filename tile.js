@@ -14,24 +14,27 @@ function Tile( tileX, tileY, level, mapLayer)
     
         
     var im = new Image();
-    //required to get CORS approval, and thus to be able to draw this on a canvas without tainting that
     im.tile = this;
+    //required to get CORS approval, and thus to be able to draw this on a canvas without tainting that
     im.crossOrigin = "anonymous";   
     im.onload = this.onImageLoaded;
     
     var servers = ["a", "b", "c"];
     
-    var idx = Math.floor(Math.random()*3);
+    var idx = Math.floor(Math.random()* servers.length);
     
     im.src = Tile.basePath.replace("{s}", servers[idx]) + level + "/" + this.x + "/" + this.y + "." + Tile.fileExtension;
     this.image = im;    
     
-    
-    var px = long2tile(Controller.position.lng,level);
-    var py = lat2tile( Controller.position.lat,level);
+    this.updateGeometry(Controller.position);
+}
 
-    var earthCircumference = 2 * Math.PI * (6378.1 * 1000);
-    var physicalTileLength = earthCircumference* Math.cos(Controller.position.lat/180*Math.PI) / Math.pow(2, level);
+Tile.prototype.updateGeometry = function(position)
+{
+    var px = long2tile(position.lng,this.level);
+    var py = lat2tile( position.lat,this.level);
+
+    var physicalTileLength = Helpers.getEarthCircumference()* Math.cos(position.lat/180*Math.PI) / Math.pow(2, this.level);
     
     var x1 = (this.x - px)     * physicalTileLength;
     var x2 = (this.x - px + 1) * physicalTileLength;
@@ -45,11 +48,21 @@ function Tile( tileX, tileY, level, mapLayer)
     var v4 = [ x1, y2, 0 ];
 
     var vertexData = [].concat(v1, v4, v3, v1, v3, v2);
+    if (this.vertices)
+        gl.deleteBuffer(this.vertices);
+    if (this.texCoords)
+        gl.deleteBuffer(this.texCoords);
+        
     this.vertices =  glu.createArrayBuffer(vertexData);
     this.texCoords = glu.createArrayBuffer([0,0,  0,1,  1,1,  0,0,  1,1,  1,0]);
-    
-    
-    
+
+}
+
+Tile.prototype.free = function()
+{
+    gl.deleteBuffer(this.vertices);
+    gl.deleteBuffer(this.texCoords);
+    gl.deleteTexture(this.texId);
 }
 
 Tile.prototype.render = function(modelViewMatrix, projectionMatrix) 
@@ -59,8 +72,7 @@ Tile.prototype.render = function(modelViewMatrix, projectionMatrix)
         return;
     
 	gl.useProgram(Shaders.textured);   //    Install the program as part of the current rendering state
-	gl.enableVertexAttribArray(Shaders.textured.locations.vertexPosition); // setup vertex coordinate buffer
-	gl.enableVertexAttribArray(Shaders.textured.locations.vertexTexCoords); //setup texcoord buffer
+	glu.enableVertexAttribArrays(Shaders.textured);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertices);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
 	gl.vertexAttribPointer(Shaders.textured.locations.vertexPosition, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
@@ -82,6 +94,8 @@ Tile.prototype.render = function(modelViewMatrix, projectionMatrix)
     gl.bindTexture(gl.TEXTURE_2D, this.texId); //render geometry using texture "tex" in texture unit 0
 	gl.drawArrays(gl.TRIANGLES, 0, 6);
     gl.disable(gl.POLYGON_OFFSET_FILL);
+
+	glu.disableVertexAttribArrays(Shaders.textured); 
 }
 
 Tile.prototype.onImageLoaded = function(e)
