@@ -66,7 +66,10 @@ var VicinityMap = {
 	    //console.log ("local aspect ratio at %s is %s", position.lat, localAspect );
 	    
 	    //console.log( webGlCanvas.height, webGlCanvas.width, fieldOfView / webGlCanvas.height * webGlCanvas.width);
-	    var phi = (0.5 * fieldOfView / webGlCanvas.height * webGlCanvas.width ) / 180 * Math.PI;
+	    var phi = (0.5 * fieldOfView / webGlCanvas.height * webGlCanvas.width );
+	    if (phi > 60) phi = 60; // wider FOV frustums look irritating
+	    phi = phi / 180 * Math.PI;
+	    
 	    var leftDir = [ Math.cos(phi) * lookDir[0]  - Math.sin(phi) * lookDir[1], 
 	                    Math.sin(phi) * lookDir[0]  + Math.cos(phi) * lookDir[1] ];
 	    var rightDir =[ Math.cos(-phi) * lookDir[0] - Math.sin(-phi) * lookDir[1], 
@@ -82,7 +85,8 @@ var VicinityMap = {
 
     onChangeSize: function()
     {
-        VicinityMap.map.invalidateSize(false);
+        if (VicinityMap.map)
+            VicinityMap.map.invalidateSize(false);
     }
 
 }

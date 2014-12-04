@@ -84,7 +84,8 @@ var Shadows = {
         mat4.lookAt(modelViewMatrix, pos, lookAtPosition, [0,0,1]);
     	mat4.scale(modelViewMatrix, modelViewMatrix, [1,-1,1]);//negate y coordinate to make positive y go downward
 	    var projectionMatrix = mat4.create();
-	    mat4.perspective(projectionMatrix, fieldOfView/180*Math.PI/300, webGlCanvas.width / webGlCanvas.height, 3000, 5100.0);
+	    //view angle of 0.17° has been determined experimentally to be sufficient to cover the whole apartment
+	    mat4.perspective(projectionMatrix, 0.17/180*Math.PI, webGlCanvas.width / webGlCanvas.height, 3000, 5100.0);
 
         // the apartment shader needs this later to access the shadow buffer
         Shadows.shadowMvpMatrix = mat4.create();

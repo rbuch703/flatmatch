@@ -41,13 +41,13 @@
 
     <script type="text/javascript" src="leaflet.js"></script>
 
-	<!--<script type="text/javascript" src="combined.js" ></script> <!-- contains everything but leaflet (which is not closure-compiler compatible) -->
+	<!--<script type="text/javascript" src="combined.js" ></script>--> <!-- contains everything but leaflet (which is not closure-compiler compatible) -->
 
     
     <title>FlatMatch - virtuelle Wohnungsbesichtigung</title>
 </head>
 
-<body overflow="hidden"> <!-- style ="padding: 0px; margin: 0px;" -->
+<body > <!-- style ="padding: 0px; margin: 0px;" -->
 
 <div id="glErrorDiv" style="display:none; max-width:800px">
     <p id="lblGlErrorMessage" style="font-weight:bold; color:#F00">
@@ -59,64 +59,66 @@
     </p>
 </div>
 
-<div id="dummy" style="position:fixed; left:0px; right:0px; top:0px; bottom: 0px; width:100%; height:100%;" >
-    <canvas id="webGlCanvas" style="position:fixed; left:0px; right:0px; top:0px; bottom: 0px; width:100%; height:100%; background:black" ></canvas>
+<div id="dummy" style="background-color:white" >
+    <div id="canvasContainer" style="position:fixed; left:0px; right:0px; top:0px; bottom: 0px;">
+        <canvas id="webGlCanvas" style="left:0px; right:0px; top:0px; bottom: 0px; width:100%; height:100%; background:black" ></canvas>
+    
+    </div>
 
     <div id="toolbarDiv" style="position:fixed; left:10px; top:10px; z-index:1; height:34px">
-        <img id="btnFullScreen" style="background-color:white">
+        <img id="btnFullScreen" style="background-color:white; margin:2px;">
         &nbsp;
     </div>
 
-    <div id="mapDiv" style="position:fixed; left:10px; width:400px; top:56px; height:400px;z-index:1; display:none"> </div>
+    <div id="mapDiv" class="toolWindow" style="height:400px; width:400px; bottom:0px; display:none"> </div>
 
-    <canvas id="minimapCanvas" style="position:fixed; left:10px; top:56px; height:400px; width:400px; border: 1px solid #777; z-index:1" ></canvas>
+    <canvas id="minimapCanvas" class="toolWindow" style="height:400px; width:400px; " ></canvas>
 
-    <div id="divSunPos" style="position:fixed; left:10px; width:400px; top:56px; height:300px; z-index:1; background-color:white; display:none; padding-left:20px; padding-right:20px">
-        <div>
+    <div id="divSunPos" class="toolWindow" style="background-color:white; display:none;">
+        <div style="padding-left:20px; padding-right:20px">
             <h3>Sonnenposition</h3>
-            Verschieben sie die Regler, um die Position der Sonnen und damit den Schattenfall anzupassen.
-            <p>
+            Verschieben sie die Regler, um die Position der Sonnen und damit den Schattenfall anzupassen.<br><br>
                 Tag: <span id="lblDay" ></span>
-                <div id="slider-day" style="width:100%"></div>
-            </p>
-            <p>
-                Zeit: <span id="lblTime" ></span>
-                <div id="slider-time" style="width:100%"></div>   
-            </p>
+                <div  id="slider-day" style="width:100%; margin-bottom:20px"></div>
+
+                Zeit: <span id="lblTime" style=""></span>
+                <div id="slider-time" style="width:100%; margin-bottom:20px"></div>   
         </div>
     </div>
 
-    <div id="divUsageNotes" style="position:fixed; left:10px; width:400px; top:56px; z-index:1; background-color:white; padding-left:20px; padding-right:20px">
+    <div id="divUsageNotes" class="toolWindow" style="">
+        <div style="padding-left:20px; padding-right:20px">
         <h3>Anleitung</h3>
         <ul>
             <li>Bewegen sie sich durch die 3D-Ansicht mit den Pfeiltasten ihrer Tastatur, oder durch Ziehen der Ansicht auf ihrem Touchscreen.</li>
             <li>Schauen sie sich um durch Klicken und Ziehen der Ansicht mit der Maus.</li>
             <li>Springen sie zu einer beliebigen Stelle in der Wohnung durch Klicken auf die entsprechende Stelle im Wohnungsgrundriss.</li>
         </ul>
+        </div>
     </div>
 
 
-    <div id="divDetails" style="position:fixed; left:10px; width:400px; top:56px; z-index:1; background-color:white; padding-left:20px;padding-right: 20px; padding-bottom:20px ">
-
-        <h3 id="hBaseInfo">Wohnungsinformationen</h3>
-        <div id="divBaseInfo">
-        <table>
-            <tr><td style="font-style:italic">Anschrift:</td><td id="lblAddress"></td></tr>
-            <tr><td style="font-style:italic">Anzahl Zimmer:</td><td id="lblRooms"></td></tr>
-            <tr><td style="font-style:italic">Größe:</td><td id="lblSize"></td></tr>
-            <tr><td style="font-style:italic">Etage:</td><td id="lblLevel"></td></tr>
-            <tr><td style="font-style:italic">Kaltmiete+<br>Nebenkosten:</td><td id="lblRent"></td></tr>
-            <tr><td style="font-style:italic">mehr</td><td id="lblDetails"></td></tr>
-        </table>
+    <div id="divDetails" class="toolWindow" style="">
+        <div style="padding-left:20px;padding-right: 20px; padding-bottom:20px">
+            <h3 id="hBaseInfo">Wohnungsinformationen</h3>
+            <div id="divBaseInfo">
+            <table>
+                <tr><td style="font-style:italic">Anschrift:</td><td id="lblAddress"></td></tr>
+                <tr><td style="font-style:italic">Anzahl Zimmer:</td><td id="lblRooms"></td></tr>
+                <tr><td style="font-style:italic">Größe:</td><td id="lblSize"></td></tr>
+                <tr><td style="font-style:italic">Etage:</td><td id="lblLevel"></td></tr>
+                <tr><td style="font-style:italic">Kaltmiete+<br>Nebenkosten:</td><td id="lblRent"></td></tr>
+                <tr><td style="font-style:italic">mehr</td><td id="lblDetails"></td></tr>
+            </table>
+            </div>
         </div>
+    </div>
 
-</div>
-
-<div id="divDisclaimer" style="position:fixed; bottom:10px; font-size:80%; font-style:italic">
-The map and building geometry are &copy;OpenStreetMap contributors and are <a href="http://www.openstreetmap.org/copyright">licensed</a> under the Creative Commons BY-SA (map) and Open Database License (buildings) licenses. For administrative questions on this page please contact the <a href="mailto:rbuch703@gmail.com">webmaster</a>.
+    <div id="divDisclaimer" style="position:fixed; bottom:10px; font-size:80%; font-style:italic">
+    The map and building geometry are &copy;OpenStreetMap contributors and are <a href="http://www.openstreetmap.org/copyright">licensed</a> under the Creative Commons BY-SA (map) and Open Database License (buildings) licenses. For administrative questions on this page please contact the <a href="mailto:rbuch703@gmail.com">webmaster</a>. </div>
 </div>
         
-        <span id="errorLog" style="color:#F00"></span>
+<span id="errorLog" style="color:#F00"></span>
 
 
 </body>

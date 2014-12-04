@@ -16,7 +16,8 @@ var rowId;
 var OFFER_REST_BASE_URL = "http://rbuch703.de/rest";
 //var OFFER_REST_BASE_URL = "http://localhost:1080/rest_v2"
 
-var mqSaveSpace = window.matchMedia( "(max-height: 799px), (orientation: portrait)" );
+var mqSaveSpace = window.matchMedia( "(max-height: 799px)" );
+var myToolbar;
 
 
 //pasted from controller.js; FIXME: find better common place
@@ -251,20 +252,11 @@ function init()
     
     
 
-    var tmp2 = new ToolWindowBar( toolbarDiv, {
-        windows: toolbarEntries
-    });
+    myToolbar = new WindowToolBar( toolbarDiv, { windows: toolbarEntries });
+    
+    mqSaveSpace.addListener(onResize);
+    onResize();
 }   
-
-function onLayoutChange()
-{
-/*    if (mqSaveSpace.matches)
-    {
-    } else
-    {
-    }*/
-}
-
 
 var frameRenderingScheduled = false;
 function scheduleFrameRendering()
@@ -383,10 +375,23 @@ function onResize()
 //    else 
 //        webGlCanvas.style.height = "100%";
 
+    //console.log("ClientWidth: %s", webGlCanvas.clientWidth);
+    //webGlCanvas.style.width = 
+    if (mqSaveSpace.matches && myToolbar && myToolbar.getActiveWindow() )
+    {
+        canvasContainer.style.left = "410px";
+        divDisclaimer.style.left = "410px";
+        mapDiv.style.height = (canvasContainer.clientHeight - mapDiv.offsetTop) + "px";
+    } else
+    {
+        canvasContainer.style.left = "0px";
+        divDisclaimer.style.left = "0px";
+        mapDiv.style.height = "400px";
+    }
 
     webGlCanvas.height = webGlCanvas.clientHeight / 2;
     webGlCanvas.width  = webGlCanvas.clientWidth / 2;
-
+    VicinityMap.onChangeSize();
 
     
     scheduleFrameRendering();

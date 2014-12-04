@@ -52,39 +52,19 @@ a {
     overflow:auto;
 }
 
-@media all and (orientation: landscape) {
-    #contentDiv {
-        width:70%; 
-        bottom:0px
-    }
-
-    #navDiv {
-        width:30%;
-        top:20px;
-    }
+.toolWindow {
+    position:fixed; 
+    left:10px; 
+    top:56px; 
+    z-index:1;
+    background-color:white;    
 }
 
-@media all and (orientation: portrait) {
-    #contentDiv {
-        height:50%; 
-        left:0px
-    }
-
-    #navDiv {
-        height:50%;
-        right:20px;
-    }
+@media all and (min-height: 800px) {
+    .toolWindow {    max-width:400px;  }
 }
 
-@media all and (min-height: 800px) and (orientation: landscape) {
-    #hBaseInfo, #hFurtherInfo {display: inherit;}
+@media all and (max-height: 799px) {
+    .toolWindow {    width:400px; }
     
 }
-
-@media all and (max-height: 799px), (orientation: portrait) {
-    #hBaseInfo, #hFurtherInfo {display: none;}
-}
-/*
-.mandatory { color:#f6931f; font-weight:bold}
-
-.myTable * {  vertical-align:text-top; }*/

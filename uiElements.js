@@ -67,7 +67,7 @@ FullScreenButton.prototype.onFullScreenToogled = function()
 
 /// =============================================================
 
-function ToolWindowBar(element, config)
+function WindowToolBar(element, config)
 {
     this.element = element;
     this.config  = config;
@@ -94,13 +94,25 @@ function ToolWindowBar(element, config)
     }
 }
 
-ToolWindowBar.prototype.createOnClickFunction = function(img)
+WindowToolBar.prototype.getActiveWindow = function ()
+{
+    for (var i in this.config.windows)
+    {
+        if (this.config.windows[i].tabVisible)
+            return window;
+    }
+
+    return null;
+ 
+}
+
+WindowToolBar.prototype.createOnClickFunction = function(img)
 {
     var bar = this;
     return function(ev) { bar.onButtonClicked(bar, img, ev) };
 }
 
-ToolWindowBar.prototype.onButtonClicked = function(bar, img, ev)
+WindowToolBar.prototype.onButtonClicked = function(bar, img, ev)
 {
     var tabToBeEnabled = null;
     for (var i in this.config.windows)
@@ -129,6 +141,8 @@ ToolWindowBar.prototype.onButtonClicked = function(bar, img, ev)
         if (tabToBeEnabled.onShow)
             tabToBeEnabled.onShow();
     }
+    
+    onResize();
     
 }
 
