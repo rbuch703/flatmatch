@@ -336,11 +336,10 @@ function initGl()
 	{
 	    //remove controls that depend on webGL, and show error messages
         glErrorDiv.style.display = "inherit";
-        navDiv.style.display = "none";
+        dummy.style.display = "none";
         divDisclaimer.style.display = "none";
-
-        document.body.removeChild(contentDiv);
-        gl = null;
+        
+        lblGlErrorMessage.textContent = Helpers.getWebGlFailReason();
 		return;
 	}
 	

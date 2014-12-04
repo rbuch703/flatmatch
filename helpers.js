@@ -38,6 +38,38 @@ var Helpers = (function(){
     "yellowgreen":"#9acd32"}
     
     var daysPerMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    
+    var webGlFailMessage = {
+        DEVICE_TOO_OLD: "Ihr Gerät ist vermutlich zu alt und unterstützt keine 3D-Grafik im Browser (WebGL)",
+        ANDROID_UNSUPPORTED_BROWSER: "Ihr Android-Browser unterstützt anscheinend keine 3D-Grafiken (WebGL). Mögliche Lösung: Installieren und benutzen sie ein aktuelle Version der Browser 'Chrome' oder 'Firefox Mobile'",
+        IOS_VERSION_TOO_OLD: "Ihr iPhone/iPad unterstützt keine 3D-Grafik im Browser (WebGL). Mögliche Lösung: Aktualisieren sie das Betriebssystem ('iOS') auf Version 8 oder höher.",
+        IE_TOO_OLD: "Ihr Internet Explorer unterstützt keine 3D-Grafik im Brwoser (WebGL). Mögliche Lösung: Aktualisieren sie den Internet Explorer auf Version 11 oder höher",
+        GENERIC: "Ihr Browser oder ihr Gerät unterstützt keine 3D-Grafik im Browser (WebGL)."
+    }
+    
+    function getWebGlFailReason()
+    {
+        var ua = navigator.userAgent.toLowerCase();
+        var isAndroid = ua.indexOf("android") > -1;
+        var isWebkit  = ua.indexOf("webkit")  > -1;
+        var isChrome  = ua.indexOf("chrome")  > -1;
+        var isFirefox = ua.indexOf("firefox") > -1;
+        var isSafari  = (ua.indexOf("safari")  > -1) && (ua.indexOf("chrome")  == -1);  //Chrome's user agent also contains the "Safari" string
+        var isMsie    = ua.indexOf("msie ")   > -1;
+       
+        var isMobile  = ua.indexOf("mobile")  > -1; //for firefox, this only means "phone", not "tablet"
+        var isTablet  = ua.indexOf("tablet")  > -1;
+        var isIphone  = ua.indexOf("iphone")  > -1;
+        var isIpad    = ua.indexOf("ipad")  > -1;
+        var isIos     = isIphone || isIpad;
+        
+        if (isAndroid && !(isChrome || isFirefox)) return webGlFailMessage.ANDROID_UNSUPPORTED_BROWSER;
+        if (isAndroid &&  (isChrome || isFirefox)) return webGlFailMessage.DEVICE_TOO_OLD;
+        if (isIos) return webGlFailMessage.IOS_VERSION_TOO_OLD;
+        if (isMsie) return webGlFailMessage.IE_TOO_OLD;
+
+        return webGlFailMessage.GENERIC;
+    }
 
     function getDayString(dayOfYear)
     {
@@ -69,6 +101,9 @@ var Helpers = (function(){
         return dayOfYear;
     }
 
-    return {getEarthCircumference: getEarthCircumference, getDayString: getDayString, getColor: getColor};
+    return {getEarthCircumference: getEarthCircumference, 
+            getDayString:          getDayString, 
+            getColor:              getColor, 
+            getWebGlFailReason:    getWebGlFailReason};
 
 })();
