@@ -100,10 +100,28 @@ var Helpers = (function(){
             
         return dayOfYear;
     }
+    
+    function ajaxGet( url, onReceivedHandler) {
+        var req = new XMLHttpRequest();
+        req.open("GET", url );
+        req.overrideMimeType("text/plain");    //necessary to stop Firefox from logging spurious errors on some documents
+        req.responseType = "";
+        req.onreadystatechange = function() 
+        { 
+            if (req.readyState != 4 || req.response == null)
+                return;
+
+            onReceivedHandler(req.responseText);
+        }
+        req.send();
+    
+    }
+    
 
     return {getEarthCircumference: getEarthCircumference, 
             getDayString:          getDayString, 
             getColor:              getColor, 
-            getWebGlFailReason:    getWebGlFailReason};
+            getWebGlFailReason:    getWebGlFailReason,
+            ajaxGet:               ajaxGet};
 
 })();

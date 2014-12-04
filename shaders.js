@@ -2,27 +2,25 @@
 
 var Shaders = {
 
+    shaderSrc: null,
+    
     init: function(errorOutput) 
     {
-    
-        var req = new XMLHttpRequest();
+        if (Shaders.shaderSrc)
+            Shaders.onShadersRetrieved(Shaders.shaderSrc);
+        else
+            Helpers.ajaxGet("shaders.xml", Shaders.onShadersRetrieved.bind(Shaders));
+            
         Shaders.errorOutput = errorOutput;
-        req.open("GET", "shaders.xml" );
-        req.onreadystatechange = function() 
-        { 
-            if (req.readyState != 4 || req.response == null)
-                return;
-
-            //manual parsing is not the most direct approach, but more cross-browser compatible
-            var parser = new DOMParser();
-            Shaders.onShadersRetrieved(parser.parseFromString(req.responseText, "application/xml"));
-        }
-        req.send();
-
     },
     
-    onShadersRetrieved: function(dom) 
+    onShadersRetrieved: function(xmlRaw) 
     {
+        Shaders.shaderSrc = xmlRaw;
+        var parser = new DOMParser();
+        var dom = parser.parseFromString(xmlRaw, "application/xml");
+    
+    
         var scripts = dom.getElementsByTagName("script");
         //console.log("%o", scripts);
         Shaders.shaderSource = {};

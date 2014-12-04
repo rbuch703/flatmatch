@@ -189,8 +189,9 @@ Apartment.loadImage = function(apartment, id, data)
     image.src = "data:image/png;base64," + data;
 }
 
-Apartment.prototype.updateTextures = function(textures)
+Apartment.prototype.updateTextures = function(texturesRaw)
 {
+    var textures = JSON.parse(texturesRaw);
     //console.log("New texture set arrived");
     var apartment = this;
     for (var i = 0; i < this.numVertices/6; i++)

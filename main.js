@@ -85,25 +85,12 @@ function initEventHandlers()
     Controller.onRequestFrameRender = scheduleFrameRendering;
 }
 
-function offerMetadataLoaded(offer)
+function offerMetadataLoaded(offerRaw)
 {
+    var offer = JSON.parse(offerRaw);
     if (!gl)
         return;
 
-    var req = new XMLHttpRequest();
-    req.open("GET", OFFER_REST_BASE_URL + "/get/textures/" + offer.layoutId );
-    req.responseType = "";
-    req.onreadystatechange = function() 
-    { 
-        if (req.readyState != 4 || req.response == null)
-            return;
-
-        mapApartment.updateTextures( JSON.parse(req.response) );
-    }
-    req.send();
-
-
-    //layoutId = offer.layoutId;
     //educated guess (3m per level, plus 1m for basement part that is above ground
     var apartmentFloorHeight = offer.level * 3.0 + 1.0;
     Controller.position = {"lat": offer.lat, "lng": offer.lon};
@@ -126,6 +113,7 @@ function offerMetadataLoaded(offer)
     }
 
     mapApartment = new Apartment(offer.layoutId, offer.scale, offer.layout, offer.yaw != null ? offer.yaw : 0.0, apartmentFloorHeight);
+    Helpers.ajaxGet(OFFER_REST_BASE_URL + "/get/textures/" + offer.layoutId, mapApartment.updateTextures.bind(mapApartment));
 
     Controller.localPosition.x = mapApartment.startingPos[0];
     Controller.localPosition.y = mapApartment.startingPos[1];
@@ -243,17 +231,8 @@ function init()
     jQuery("#slider-day .ui-slider-handle").unbind('keydown');    
     jQuery("#slider-time .ui-slider-handle").unbind('keydown');    
     
-    var req = new XMLHttpRequest();
-    req.open("GET", OFFER_REST_BASE_URL + "/get/offer/" + rowId );
-    req.responseType = "";
-    req.onreadystatechange = function() 
-    { 
-        if (req.readyState != 4 || req.response == null)
-            return;
+    Helpers.ajaxGet(OFFER_REST_BASE_URL + "/get/offer/" + rowId, offerMetadataLoaded);
 
-        offerMetadataLoaded( JSON.parse(req.response) );
-    }
-    req.send();
 
 	var tmp = new FullScreenButton( btnFullScreen, 
 	    {target:dummy, 
@@ -324,6 +303,31 @@ function executeFrameRendering()
         ApartmentMap.render( mapApartment.localToPixelCoordinates( Controller.localPosition ) );
 }
 
+function onGlContextLost(event)
+{
+    event.preventDefault();
+    gl = null; //to prevent all access to the Gl context
+    
+    //these need to be reset as they contain ressources bound to the lost gl context
+    mapBuildings = null;
+    mapApartment = null;
+    mapPlane = null;
+    mapSun = null;
+    mapSkyDome = null;
+
+    
+}
+
+function onGlContextRestored(event)
+{
+    initGl();    
+    Shaders.init(errorLog);
+
+    mapSkyDome = new SkyDome();
+    mapSkyDome.onLoaded = scheduleFrameRendering;
+
+    Helpers.ajaxGet(OFFER_REST_BASE_URL + "/get/offer/" + rowId, offerMetadataLoaded);
+}
 
 /**
  * Initialises WebGL and creates the 3D scene.
@@ -332,6 +336,10 @@ function initGl()
 {
     //create context
 	gl = webGlCanvas.getContext("webgl") || webGlCanvas.getContext("experimental-webgl");
+	
+    webGlCanvas.addEventListener("webglcontextlost", onGlContextLost, false);	
+    webGlCanvas.addEventListener("webglcontextrestored", onGlContextRestored, false);	
+	
 	if(!gl)
 	{
 	    //remove controls that depend on webGL, and show error messages

@@ -60,15 +60,8 @@ function Buildings(gl, position)
     
     for (i in tiles)
     {        
-        var bldgs = this;
-        var oReq = new XMLHttpRequest();
-        oReq.onload = function() { bldgs.onDataLoaded(this); }
         var url = "http://rbuch703.de/tiles/geo/"+tiles[i].x+"/"+tiles[i].y+".json"
-        //var url = "./geoTiles/"+tiles[i].x+"/"+tiles[i].y+".json"
-//        console.log("requesting %s", url);
-        oReq.overrideMimeType("text/plain");    //necessary to stop Firefox from logging a spurious error
-        oReq.open("get", url, true);
-        oReq.send();
+        Helpers.ajaxGet( url, this.onDataLoaded.bind(this));
     }
     
 }    
@@ -76,7 +69,7 @@ function Buildings(gl, position)
 Buildings.prototype.onDataLoaded = function(response) {
     try
     {
-        var responseGeometry = JSON.parse(response.responseText);
+        var responseGeometry = JSON.parse(response);
         [].push.apply(this.geometry, responseGeometry);
     }
     catch(err)

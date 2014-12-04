@@ -131,6 +131,8 @@ glu.init = function()
     if (glu.anisotrophyExtension)
         glu.anisotropyExtension.MAX_TEXTURE_MAX_ANISOTROPY_EXT = gl.getParameter(glu.anisotropyExtension.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
 
+    glu.loseContextExtension = gl.getExtension("WEBGL_lose_context");
+
     glu.depthTextureExtension = gl.getExtension("WEBGL_depth_texture");
 
     /* Note: we do not actually need WEBGL_depth_texture for shadow mapping, as the current implementation 
@@ -144,6 +146,19 @@ glu.init = function()
     glu.vertexShaderMediumFloatPrecision = format.precision;
     //console.log("Shader precision: %o", precision);
 }
+
+glu.loseContext = function()
+{
+    if (glu.loseContextExtension && glu.loseContextExtension.loseContext)
+        glu.loseContextExtension.loseContext();
+}
+
+glu.restoreContext = function()
+{
+    if (glu.loseContextExtension && glu.loseContextExtension.restoreContext)
+        glu.loseContextExtension.restoreContext();
+}
+
 
 glu.setMaxAnisotropy = function()
 {

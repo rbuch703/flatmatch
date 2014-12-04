@@ -143,11 +143,8 @@ Buildings.prototype.requestGeometry = function(position)
                                        ';relation["type"="building"]'+bbox+
                                        ');out body;>;out skel qt;';
 
-    var bldgs = this;
-    var oReq = new XMLHttpRequest();
-    oReq.onload = function() { bldgs.onDataLoaded(this); }
-    oReq.open("get", Buildings.apiBaseUrl + "?data=" + encodeURIComponent(query), true);
-    oReq.send();
+    Helpers.ajaxGet(Buildings.apiBaseUrl + "?data=" + encodeURIComponent(query), 
+                    this.onDataLoaded.bind(this) );
 
 }
 
@@ -586,7 +583,7 @@ Buildings.parseOSMQueryResult = function(res) {
 }
     
 Buildings.prototype.onDataLoaded = function(response) {
-    var osmQueryResult = JSON.parse(response.responseText);
+    var osmQueryResult = JSON.parse(response);
 	
 
     //console.log("map center is lat/lng: %s%s; x/y: (%s,%s)", mapCenter.lat, mapCenter.lon , x, y);
