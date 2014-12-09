@@ -6,8 +6,7 @@ function FullScreenButton(element, config)
     this.config.element = element;
     this.isFullScreen = false;
     
-    element.width = 32;
-    element.height = 32;
+    element.className = "toolButton";
     element.src = config.icon;
 	element.addEventListener("click", this.onToggleFullScreen.bind(this), false);
 
@@ -81,11 +80,7 @@ function WindowToolBar(element, config)
 
         var window = config.windows[i];
         window.img = new Image();
-        window.img.width = 32;
-        window.img.height= 32;
-        window.img.style.margin = "2px";
-//        window.img.style.border = "1px solid #555";
-        window.img.style.backgroundColor = "white";
+        window.img.className = "toolButton"; 
         window.img.src = window.icon;
         window.img.addEventListener("click", this.createOnClickFunction(window.img));
         window.tabVisible = false;
@@ -125,17 +120,14 @@ WindowToolBar.prototype.onButtonClicked = function(bar, img, ev)
     for (var i in this.config.windows)
     {
         var window = this.config.windows[i];
-        window.img.style.border = "";
-        window.img.style.margin = "2px";
+        window.img.className = "toolButton"; 
         window.target.style.display = "none";
         window.tabVisible = false;
     }
     
     if (tabToBeEnabled)
     {
-        tabToBeEnabled.img.style.border = "2px solid #C55";
-        tabToBeEnabled.img.style.margin = "0px";
-
+        tabToBeEnabled.img.className = "toolButtonClicked"; 
         tabToBeEnabled.target.style.display = "block";
         tabToBeEnabled.tabVisible = true;
         if (tabToBeEnabled.onShow)

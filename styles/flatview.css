@@ -55,10 +55,31 @@ a {
 .toolWindow {
     position:fixed; 
     left:10px; 
-    top:56px; 
+    top:72px; 
     z-index:1;
     background-color:white;    
 }
+
+.toolButton {
+    margin:  2px;
+    width:  48px;
+    height: 48px;
+    background-color:white;
+}
+
+.toolButton:hover {
+    margin: 0px;
+    border: 2px solid #CCC;
+}
+
+.toolButtonClicked {
+    margin:  0px;
+    border:  2px solid #C55;
+    width:  48px;
+    height: 48px;
+    background-color:white;
+}
+
 
 @media all and (min-height: 800px) {
     .toolWindow {    max-width:400px;  }

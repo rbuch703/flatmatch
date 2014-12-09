@@ -241,8 +241,8 @@ function init()
 	    returnIcon: "images/ic_action_return_from_full_screen.png"});
 
     var toolbarEntries = [
-        {icon: "images/ic_action_map.png", target:mapDiv, onShow:function(){VicinityMap.onChangeSize(); }},
-        {icon: "images/ic_action_place.png", target:minimapCanvas, onShow:ApartmentMap.resize.bind(ApartmentMap)},
+        {icon: "images/ic_action_place.png", target:mapDiv, onShow:function(){VicinityMap.onChangeSize(); }},
+        {icon: "images/ic_action_layout.png", target:minimapCanvas, onShow:ApartmentMap.resize.bind(ApartmentMap)},
         {icon: "images/ic_action_sun_position.png",target: divSunPos},
         {icon: "images/ic_action_details.png", target:divDetails},
         {icon: "images/ic_action_help.png", target:divUsageNotes}];
