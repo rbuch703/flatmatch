@@ -14,17 +14,17 @@ function FullScreenButton(element, config)
     document.addEventListener("fullscreenchange", this.onFullScreenToogled.bind(this), false);
     document.addEventListener("mozfullscreenchange", this.onFullScreenToogled.bind(this), false);
     document.addEventListener("webkitfullscreenchange", this.onFullScreenToogled.bind(this), false);
-    document.addEventListener("msfullscreenchange", this.onFullScreenToogled.bind(this), false);
+    document.addEventListener("MSFullscreenChange", this.onFullScreenToogled.bind(this), false);
 
 
 }
 
 FullScreenButton.prototype.getFullScreenElement = function() {
     //FIXME: check capitalization of document.fullscreenElement
-    return document.fullscreenElement ||
-           document.mozFullScreenElement ||
-           document.msFullScreenElement ||
-           document.webkitFullscreenElement;
+    return document.fullscreenElement ||    //FIXME: uncertain
+           document.mozFullScreenElement || //checked
+           document.msFullscreenElement ||  //checked
+           document.webkitFullscreenElement; //checked
 }
 
 FullScreenButton.prototype.requestFullScreenMode = function(elem)
@@ -37,12 +37,12 @@ FullScreenButton.prototype.requestFullScreenMode = function(elem)
 
 FullScreenButton.prototype.exitFullScreenMode = function(elem)
 {
-    var exitMethod = document.cancelFullScreen || 
-                     document.msCancelFullScreen || 
-                     document.mozCancelFullScreen || 
-                     document.webkitCancelFullScreen;
+    var exitMethod = document.cancelFullScreen ||     //FIXME: untested
+                     document.msExitFullscreen ||     // verified
+                     document.mozCancelFullScreen ||  // verified
+                     document.webkitCancelFullScreen; // verified
     
-    console.log("Fullscreen exit method is %o", exitMethod);
+    //console.log("Fullscreen exit method is %o", exitMethod);
     if (exitMethod)
         exitMethod.bind(document)();
 }
