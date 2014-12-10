@@ -412,6 +412,8 @@ function onResize()
             canvasContainer.style.left = "0px";
             canvasContainer.style.top = "0px";
             activeDiv.className = "toolWindow toolOverlay";
+            activeDiv.style.maxHeight = ""
+
 
             if (activeDiv == mapDiv)
             {                
@@ -427,6 +429,7 @@ function onResize()
         break;
         case "side":
             canvasContainer.style.top  = "0px";
+            activeDiv.style.maxHeight = ""
             
             activeDiv.className = "toolWindow toolSide";
             if (activeDiv == mapDiv)
