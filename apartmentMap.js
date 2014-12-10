@@ -4,13 +4,15 @@ var ApartmentMap = (function(){
 
     var scaledLayout;
     var canvas;
+    var div;
     var layoutImage;
     var onClick;
 	//layoutImage
 
-    function init(_canvas, layoutSrc) 
+    function init(_div, _canvas, layoutSrc) 
     {
         canvas = _canvas;
+        div = _div
         
         layoutImage = new Image();
         layoutImage.onload = function() {
@@ -123,12 +125,37 @@ var ApartmentMap = (function(){
 
 	}
 
-    function resize()
+    function resize(maxWidth, maxHeight)
     {
+        if (!canvas || !layoutImage)
+            return;
+
+        /* resize the div holding the layout canvas, so that it fits into 
+         * maxWidth x maxHeight, and is completely covered by the layout
+         * image without distorting the latter
+        */           
+        var imgAspect = layoutImage.width / layoutImage.height;
+        var targetAspect = maxWidth / maxHeight;
+        
+        var width, height;
+        if (targetAspect > imgAspect)   //target aspect is wider than image aspect
+        {
+            height = maxHeight;
+            width = maxHeight * imgAspect;
+        } else
+        {
+            width = maxWidth;
+            height = maxWidth / imgAspect;
+        }
+        
+        
+        div.style.width =  width + "px";
+        div.style.height= height + "px";
+        
+            
         //if (!layoutImage)
         //    return;
 
-        //var aspect = layoutImage.width / layoutImage.height;
         //canvas.style.height = canvas.clientWidth / aspect + "px";
         canvas.height = canvas.clientHeight;
         canvas.width  = canvas.clientWidth;

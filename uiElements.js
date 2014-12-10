@@ -94,7 +94,7 @@ WindowToolBar.prototype.getActiveWindow = function ()
     for (var i in this.config.windows)
     {
         if (this.config.windows[i].tabVisible)
-            return window;
+            return this.config.windows[i];
     }
 
     return null;
@@ -128,7 +128,7 @@ WindowToolBar.prototype.onButtonClicked = function(bar, img, ev)
     if (tabToBeEnabled)
     {
         tabToBeEnabled.img.className = "toolButtonClicked"; 
-        tabToBeEnabled.target.style.display = "block";
+        tabToBeEnabled.target.style.display = "";
         tabToBeEnabled.tabVisible = true;
         if (tabToBeEnabled.onShow)
             tabToBeEnabled.onShow();
