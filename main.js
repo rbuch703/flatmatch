@@ -236,10 +236,26 @@ function init()
     Helpers.ajaxGet(OFFER_REST_BASE_URL + "/get/offer/" + rowId, offerMetadataLoaded);
 
 
-	var tmp = new FullScreenButton( btnFullScreen, 
-	    {target:dummy, 
-	    icon:       "images/ic_action_full_screen.png",
-	    returnIcon: "images/ic_action_return_from_full_screen.png"});
+    var ua = navigator.userAgent.toLowerCase();
+    var isAndroid = ua.indexOf("android") > -1;
+    var isWebkit  = ua.indexOf("webkit")  > -1;
+    var isIphone  = ua.indexOf("iphone")  > -1;
+    var isIpad    = ua.indexOf("ipad")  > -1;
+    var isIos     = isIphone || isIpad;
+        
+    /* theres a bug in Webkit mobile where the browser nav bar is (correctly) hidden on fullscreen,
+       but is not shown again when fullscreen mode is left. Normally, the nav bar would then be
+       shown again when the user scrolls up, but in our case there is no scrolling (as touch dragging
+       is used for movement). So the nav bar would never be shown, rendering the browser useless.
+       At this time, the only workaround to disable fullscreen mode on those devices.
+       */
+    var isBuggy = ( (isAndroid || isIos) && isWebkit);
+
+    if (!isBuggy)
+    	var tmp = new FullScreenButton( btnFullScreen, 
+	        {target:dummy, 
+	        icon:       "images/ic_action_full_screen.png",
+	        returnIcon: "images/ic_action_return_from_full_screen.png"});
 
     var toolbarEntries = [
         {icon: "images/ic_action_place.png", target:mapDiv, onShow:function(){VicinityMap.onChangeSize(); }},
