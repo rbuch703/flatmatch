@@ -62,7 +62,8 @@
     uniform sampler2D tex;
     
 	void main(void) {
-        gl_FragColor = vec4(  texture2D(tex, texCoordV).rgb * vertexColor, 1.0);
+	    vec3 brightness = texture2D(tex, texCoordV).rgb * 2.0;
+        gl_FragColor = vec4( vertexColor*brightness, 1.0);
 	}
 ]]>
 </script>

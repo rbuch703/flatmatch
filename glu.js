@@ -12,6 +12,7 @@ glu.compileShader = function (src_str, type)
         //console.log("Couldn't compile the shader: " + gl.getShaderInfoLog(shader) );
         //    Clean up
         var errorMsg = gl.getShaderInfoLog(shader);
+		console.log("Shader compilation error: %s", errorMsg);
         gl.deleteShader(shader);
         return [false, "Couldn't compile the shader: " + errorMsg + "\nSource is: " + src_str];
     }
@@ -27,6 +28,7 @@ glu.createProgram = function (vShader, fShader)
 	gl.linkProgram(shaderProgram);           
 	if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
 		var errorMsg = gl.getProgramInfoLog(shaderProgram);
+		console.log("Shader link error: %s", errorMsg);
 		//    Clean up
 		gl.deleteProgram(shaderProgram);
 		gl.deleteShader(vShader);
