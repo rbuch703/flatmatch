@@ -62,7 +62,6 @@ Apartment.prototype.render = function(modelViewMatrix, projectionMatrix, shadowM
 	    gl.uniform3fv(Shaders.shadow.locations.sunDir, sunDir);
 
         gl.uniform1i(Shaders.shadow.locations.tex, 0); //select texture unit 0 as the source for the shader variable "tex" 
-        gl.uniform1i(Shaders.shadow.locations.shadowTex, 1); //select texture unit 1 as the source for the shader variable "shadowTex" 
 
 	    gl.bindBuffer(gl.ARRAY_BUFFER, this.normals);
 	    gl.vertexAttribPointer(Shaders.shadow.locations.normalIn, 3, gl.FLOAT, false, 0, 0);  //assigns array "texCoords" bound above as the vertex attribute "vertexTexCoords"
@@ -70,6 +69,7 @@ Apartment.prototype.render = function(modelViewMatrix, projectionMatrix, shadowM
 
         gl.activeTexture(gl.TEXTURE1);
         gl.bindTexture(gl.TEXTURE_2D, Shadows.colorTexture);//.depthTexture);
+        gl.uniform1i(Shaders.shadow.locations.shadowTex, 1); //select texture unit 1 as the source for the shader variable "shadowTex" 
     }
     
 	for (var i = 0; i < this.numVertices; i+=6)

@@ -50,12 +50,20 @@ Tile.prototype.updateGeometry = function(position)
     var vertexData = [].concat(v1, v4, v3, v1, v3, v2);
     if (this.vertices)
         gl.deleteBuffer(this.vertices);
-    if (this.texCoords)
-        gl.deleteBuffer(this.texCoords);
+    /*if (this.texCoords)
+        gl.deleteBuffer(this.texCoords);*/
         
     this.vertices =  glu.createArrayBuffer(vertexData);
-    this.texCoords = glu.createArrayBuffer([0,0,  0,1,  1,1,  0,0,  1,1,  1,0]);
+    
+    if (! this.texCoords)
+        this.texCoords = glu.createArrayBuffer([0,0,  0,1,  1,1,  0,0,  1,1,  1,0]);
 
+    if (! this.normals)
+        this.normals = glu.createArrayBuffer([0,0,1,  0,0,1,  0,0,1,  0,0,1,  0,0,1,  0,0,1]);
+
+    if (! this.vertexColors)
+        this.vertexColors = glu.createArrayBuffer([1,1,1,  1,1,1,  1,1,1,  1,1,1,  1,1,1,  1,1,1]);
+    
 }
 
 Tile.prototype.free = function()
@@ -70,7 +78,7 @@ Tile.prototype.render = function(modelViewMatrix, projectionMatrix)
     //texture is not yet ready --> cannot render
     if (this.texId === null || !Shaders.ready)
         return;
-    
+
 	gl.useProgram(Shaders.textured);   //    Install the program as part of the current rendering state
 	glu.enableVertexAttribArrays(Shaders.textured);
 
@@ -110,9 +118,9 @@ Tile.prototype.onImageLoaded = function(e)
 }
 
 
-//Tile.basePath = "http://{s}.tile.openstreetmap.org/";   // attached to the constructor to be shared globally
+Tile.basePath = "http://{s}.tile.openstreetmap.org/";   // attached to the constructor to be shared globally
 //Tile.basePath = "http://{s}.tile.rbuch703.de/osm/";
-Tile.basePath = "http://{s}.tile.rbuch703.de/tiles/mipmap/";
+//Tile.basePath = "http://{s}.tile.rbuch703.de/tiles/mipmap/";
 Tile.fileExtension = "png";
 
 //Tile.basePath = "http://otile1.mqcdn.com/tiles/1.0.0/sat/";   // attached to the constructor to be shared globally

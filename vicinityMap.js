@@ -23,6 +23,11 @@ var VicinityMap = {
         VicinityMap.map.setView([lat, lng], 18)
     },
 
+    onMapClick: function(evt)
+    {
+        //console.log(evt);
+    },
+
     updatePositionMarker: function(newPos)
     {
         if (!VicinityMap.map)  //not yet initialized

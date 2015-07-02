@@ -22,13 +22,19 @@ function sub3(a, b) { return [a[0] - b[0], a[1] - b[1], a[2] - b[2] ]; }
 function add3(a, b) { return [a[0] + b[0], a[1] + b[1], a[2] + b[2] ]; }
 function mul3scalar(a, s) { return [a[0]*s, a[1]*s, a[2]*s]; }
 function neg3(a) { return [-a[0], -a[1], -a[2]]; }
-
+function equals3(a,b) {return a[0] == b[0] && a[1] == b[1] && a[2] == b[2];}
+function dot3(a, b) { return a[0]*b[0] + a[1]*b[1] + a[2]*b[2];}
+function cross3(a, b) {
+    return [a[1]*b[2] - a[2]*b[1],
+            a[2]*b[0] - a[0]*b[2],
+            a[0]*b[1] - a[1]*b[0]];
+}
 
 
 function sub2(a, b) { return [a[0] - b[0], a[1] - b[1] ]; }
 function add2(a, b) { return [a[0] + b[0], a[1] + b[1] ]; }
 function len2(a)    { return Math.sqrt(a[0]*a[0] + a[1]*a[1]); }
-function dist2(a, b){ return len2 (sub(a, b)); }
+function dist2(a, b){ return len2 (sub2(a, b)); }
 function norm2(a) { var len = Math.sqrt(a[0]*a[0] + a[1]*a[1]); return [a[0]/len, a[1]/len];}
 function dot2(a,b) { return a[0]*b[0] + a[1]*b[1];}
 
@@ -65,6 +71,8 @@ function openingAngle( v1, v2, v3) {
     var c = dist3(v1, v3);
     
     var cosAlpha = - ( a*a - b*b - c*c)/ ( 2*b*c);
+    cosAlpha = Math.min(1, Math.max( -1, cosAlpha)); //clamp to [-1..1] to reduce the effect of numerical inaccuracy
+    
     return Math.acos(cosAlpha) / Math.PI * 180;
 }
 

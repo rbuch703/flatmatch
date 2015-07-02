@@ -20,6 +20,8 @@ function Buildings(gl, position)
     image.onload = function() 
     {
         glu.updateTexture( bldgs.windowTexture, image);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
         
         if (Controller.onRequestFrameRender)
             Controller.onRequestFrameRender();
@@ -208,7 +210,7 @@ Buildings.integrateNodeData = function(nodes, ways) {
             else
             {
                 delete way.nodes[j];
-                console.log("[WARN] Way %o contains node %d, but server response does not include that node data. Skipping.", way, id);
+                console.log("[WARN] Way %o contains node %d, but server response does not include that node data. Skipping.", way, way.id);
             }
         }
     }
@@ -222,9 +224,9 @@ Buildings.integrateWays = function(ways, relations) {
             continue;
 
 
-        for (var j in rel.members)
+        for (var j in rel["members"])
         {
-            var member = rel.members[j];
+            var member = rel["members"][j];
             if (member.type != "way")
                 continue;
 
@@ -305,6 +307,9 @@ Buildings.splitResponse = function(response)
 }
 
 Buildings.joinWays = function(w1, w2) {
+
+    var areIdentical = function(n1, n2) { return n1["lat"] == n2["lat"] && n1["lon"] == n2["lon"]; }
+
     //step 1: formal checks for mergeability
     if (w1.role != w2.role)
         return false;
@@ -313,29 +318,35 @@ Buildings.joinWays = function(w1, w2) {
     if (w1.type != "way" || w2.type != "way")
         return false;
         
-    if (w1.ref.nodes[0].id == w1.ref.nodes[w1.ref.nodes.length-1].id||
-        w2.ref.nodes[0].id == w2.ref.nodes[w2.ref.nodes.length-1].id)
+    //one of the ways is already a closed polygon
+    if (areIdentical(w1.ref.nodes[0], w1.ref.nodes[w1.ref.nodes.length-1]) ||
+        areIdentical(w2.ref.nodes[0], w2.ref.nodes[w2.ref.nodes.length-1]))
         return false;
     
     //step 2: merging node chains
     var nodes;    
-    if (w1.ref.nodes[0].id == w2.ref.nodes[0].id)
+    var w1FirstNode = w1.ref.nodes[0];
+    var w1LastNode  = w1.ref.nodes[w1.ref.nodes.length-1];
+    var w2FirstNode = w2.ref.nodes[0];
+    var w2LastNode  = w2.ref.nodes[w2.ref.nodes.length-1];
+    
+    if (areIdentical(w1FirstNode, w2FirstNode))
     {
-        nodes = w2.ref.nodes.reverse().slice(1).concat(w1.ref.nodes);
-    } else if (w1.ref.nodes[0].id == w2.ref.nodes[w2.ref.nodes.length-1].id)
+        nodes = w2.ref.nodes.reverse().concat(w1.ref.nodes.slice(1));
+    } else if (areIdentical(w1FirstNode, w2LastNode))
     {
         nodes = w2.ref.nodes.concat(w1.ref.nodes.slice(1));
-    } else if (w2.ref.nodes[0].id == w1.ref.nodes[w1.ref.nodes.length-1].id)
+    } else if (areIdentical(w2FirstNode, w1LastNode))
     {
         nodes = w1.ref.nodes.concat(w2.ref.nodes.slice(1));
-    } else if (w1.ref.nodes[w1.ref.nodes.length-1].id == w2.ref.nodes[w2.ref.nodes.length-1].id)
+    } else if (areIdentical(w1LastNode, w1LastNode))
     {
         nodes = w1.ref.nodes.concat(w2.ref.nodes.reverse().slice(1));
     } else return false;
 
     /*step 3: merging tag sets. Strategy: hope that each attribute is either present in at most one of the
-              two sets, or that both sets agree on the value for that attribute. If they don't, discard 
-              the attribute belonging to the second set.
+              two sets, or that both sets agree on the value for that attribute. If they don't, (arbitrarily) 
+              discard the attribute belonging to the second set.
      */
     var tags = {};
     if (w1.ref.tags)
@@ -379,9 +390,9 @@ Buildings.mergeMultiPolygonSegments = function(rel, setOfRelations) {
     rel.outlines = [];
     
     var currentOutline = null;
-    for (var j in rel.members)
+    for (var j in rel["members"])
     {
-        var member = rel.members[j];
+        var member = rel["members"][j];
         if (member.type == "node")
             continue;
 
@@ -407,8 +418,15 @@ Buildings.mergeMultiPolygonSegments = function(rel, setOfRelations) {
             continue;
         }
 
-        var way = rel.members[j];
-        delete rel.members[j];
+        var way = rel["members"][j];
+        delete rel["members"][j];
+        
+        /* error handling: was a way reference that never got resolved to an actual way
+         *                 (usually because the server response did not include the way. */
+        if (typeof way.ref === "number")
+            continue;
+            
+        //console.log(way);
         /* if we currently have an open outline segment, then this next ways must be connectable
          * to that outline. If not then we have to fallback to close that open outline segment with a
          * straight line (which is usually not the intended result), store it, and continue with the next one
@@ -468,7 +486,7 @@ Buildings.mergeMultiPolygonSegments = function(rel, setOfRelations) {
 
 //distributes the attributes that a relation may have, but its members may not, to these members
 Buildings.distributeAttributes = function(rel) {
-    var important_tags = ["building:levels", "roof:levels", "building:min_level", "height", "min_height", 
+    var important_tags = ["building:levels", "roof:levels", "building:min_level", "height", "min_height", "colour", "color",
                           "building:colour", "building:color", "roof:colour", "roof:color"];
 
 
@@ -501,15 +519,15 @@ Buildings.sanitizeTags = function(tags, src) {
     //console.log("%o", tags);
     if ("building:height" in tags && !("height" in tags))
     {
-        console.log("[INFO] depricated tag 'building:height' in %s %s", src.type, src.id);
+        //console.log("[INFO] deprecated tag 'building:height' in %s %s", src.type, src.id);
         tags.height = tags["building:height"];
         delete tags["building:height"];
     }
     
     if ("building:min_height" in tags && !("min_height" in tags))
     {
-        console.log("[INFO] depricated tag 'building:min_height' in %s %s", src.type, src.id);
-        tags.height = tags["building:min_height"];
+        console.log("[INFO] deprecated tag 'building:min_height' in %s %s", src.type, src.id);
+        tags.min_height = tags["building:min_height"];
         delete tags["building:min_height"];
     }    
 }
@@ -529,9 +547,9 @@ Buildings.parseOSMQueryResult = function(res) {
         if (relations[i].tags.type != "building")
             continue;
             
-        for (var j in relations[i].members)
+        for (var j in relations[i]["members"])
         {
-            var member = relations[i].members[j];
+            var member = relations[i]["members"][j];
             
             if (member.role != "outline")
                 continue;
@@ -630,16 +648,16 @@ function triangulate(outline)
     {
         var tri = triangles[i];
         //console.log(tri);
-        vertexData.push( tri.points_[0].x, tri.points_[0].y);
-        vertexData.push( tri.points_[1].x, tri.points_[1].y);
-        vertexData.push( tri.points_[2].x, tri.points_[2].y);
+        vertexData.push( tri["points_"][0].x, tri["points_"][0].y);
+        vertexData.push( tri["points_"][1].x, tri["points_"][1].y);
+        vertexData.push( tri["points_"][2].x, tri["points_"][2].y);
     }
     return vertexData;
     //console.log(vertexData);
     
 }
 
-function getLengthInMeters(len_str) {
+function getLengthInMeters(len_str, src) {
     len_str = len_str.replace(",", "."); //workaround for lengths with the wrong decimal seperator
 
     // matches a float (including optional fractional part and optional 
@@ -648,7 +666,7 @@ function getLengthInMeters(len_str) {
     var m = re.exec(len_str);
     if (!m)
     {
-        console.log("cannot parse length string '" + len_str + "'");
+        console.log("cannot parse length string '%s' in %o", len_str, src);
         //fallback: if the string is not valid as a whole, let 
         //          JavaScript itself parse as much of it as possible
         return parseFloat(len_str); 
@@ -663,9 +681,7 @@ function getLengthInMeters(len_str) {
     if (unit == "m") //already in meters -> no conversion necessary
         return val; 
 
-    console.log("unit is '" + unit + "'");
-    if (console.warn)
-        console.warn("no unit conversion performed");
+    console.log("[WARN] Unknown unit '%s' in %o; skipping unit conversion", len_str, src);
 
     return val;
 }
@@ -691,7 +707,7 @@ Buildings.interpretColor = function(col, defaultColor)
     if (hexColor) 
         col = hexColor;
     
-    var re = new RegExp("^#([a-fA-F0-9]{6})$");   //a hash sign followed by exactly six hexadecimal characters
+    var re = new RegExp("^(?:#)?([a-fA-F0-9]{6})$");   //an optional hash sign followed by exactly six hexadecimal characters
     var m = col.match(re)
     if (m)
     {
@@ -728,7 +744,7 @@ Buildings.prototype.buildGlGeometry = function(outlines) {
         //    console.log("building with color %s", bldg.tags["building:colour"]);
 
         if ("height" in bldg.tags)
-            bldg.height = getLengthInMeters(bldg.tags.height);
+            bldg.height = getLengthInMeters(bldg.tags.height, bldg);
         else if (bldg.tags["building:levels"])
         {
             bldg.height = parseFloat(bldg.tags["building:levels"])*3.5;
@@ -743,9 +759,9 @@ Buildings.prototype.buildGlGeometry = function(outlines) {
         
             
         if (bldg.tags.min_height)
-            bldg.min_height = getLengthInMeters(bldg.tags.min_height);
+            bldg.min_height = getLengthInMeters(bldg.tags.min_height, bldg);
         else if (bldg.tags["building:min_level"])
-            bldg.min_height = parseInt(bldg.tags["building:min_level"])*3.5;
+            bldg.min_height = parseInt(bldg.tags["building:min_level"], 10)*3.5;
         else
             bldg.min_height = 0.0;
 
@@ -759,7 +775,10 @@ Buildings.prototype.buildGlGeometry = function(outlines) {
         {
             numLevels = bldg.tags["building:levels"] | 0;
             if (bldg.tags["roof:levels"] != undefined)
-                numLevels += bldg.tags["roof:levels"];
+                numLevels += (bldg.tags["roof:levels"] | 0);
+                
+            if (bldg.tags["building:min_level"] != undefined)
+                numLevels -= (bldg.tags["building:min_level"] | 0);
         }
 
         if (bldg.nodes[0].dx != bldg.nodes[bldg.nodes.length-1].dx || bldg.nodes[0].dy != bldg.nodes[bldg.nodes.length-1].dy)
@@ -769,6 +788,8 @@ Buildings.prototype.buildGlGeometry = function(outlines) {
         bldg.roofColor = [0.8, 0.8, 0.8];
         
         //use incorrect tag name first, overwrite with correct one if it exists
+        bldg.color = Buildings.interpretColor(bldg.tags["color"], bldg.color);  //not an official color tag, but still used sometimes
+        bldg.color = Buildings.interpretColor(bldg.tags["colour"], bldg.color); //not an official color tag, but still used sometimes
         bldg.color = Buildings.interpretColor(bldg.tags["building:color"], bldg.color);
         bldg.color = Buildings.interpretColor(bldg.tags["building:colour"], bldg.color);    
 
@@ -797,7 +818,8 @@ Buildings.prototype.buildGlGeometry = function(outlines) {
             var dy = bldg.nodes[j+1].dy - bldg.nodes[j].dy;
 
             var hDist = Math.floor(Math.sqrt(dx*dx+dy*dy) / 2.0);
-            var N = norm3( [dy, -dx, 0] );
+            //var N = norm3( [dy, -dx, 0] );
+            var N = norm3( [-dy, -dx, 0] );
             // D-C
             // |/|
             // A-B
@@ -909,15 +931,12 @@ Buildings.prototype.renderDepth = function(modelViewMatrix, projectionMatrix) {
 	glu.enableVertexAttribArrays(Shaders.depth);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertices);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
-	gl.vertexAttribPointer(Shaders.depth.locations.vertexPosition, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
+	gl.vertexAttribPointer(Shaders.depth.locations["vertexPosition"], 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
     
     var mvpMatrix = mat4.create();
     mat4.mul(mvpMatrix, projectionMatrix, modelViewMatrix);
 
-	gl.uniformMatrix4fv(Shaders.depth.locations.modelViewProjectionMatrix, false, mvpMatrix);
-
-    //gl.activeTexture(gl.TEXTURE0);  //successive commands (here 'gl.bindTexture()') apply to texture unit 0
-    //gl.bindTexture(gl.TEXTURE_2D, null); //render geometry without texture
+	gl.uniformMatrix4fv(Shaders.depth.locations["modelViewProjectionMatrix"], false, mvpMatrix);
     
     gl.drawArrays(gl.TRIANGLES, 0, this.numVertices);    
 
@@ -935,35 +954,35 @@ Buildings.prototype.render = function(modelViewMatrix, projectionMatrix) {
     glu.enableVertexAttribArrays(Shaders.building);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertices);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
-	gl.vertexAttribPointer(Shaders.building.locations.vertexPosition, 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
+	gl.vertexAttribPointer(Shaders.building.locations["vertexPosition"], 3, gl.FLOAT, false, 0, 0);  //assigns array "vertices" bound above as the vertex attribute "vertexPosition"
     
 	gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoords);
-	gl.vertexAttribPointer(Shaders.building.locations.vertexTexCoords, 2, gl.FLOAT, false, 0, 0);  //assigns array "texCoords" bound above as the vertex attribute "vertexTexCoords"
+	gl.vertexAttribPointer(Shaders.building.locations["vertexTexCoords"], 2, gl.FLOAT, false, 0, 0);  //assigns array "texCoords" bound above as the vertex attribute "vertexTexCoords"
 
-    if (Shaders.building.locations.vertexColorIn > -1)
+    if (Shaders.building.locations["vertexColorIn"] > -1)
     {
 	    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexColors);
-	    gl.vertexAttribPointer(Shaders.building.locations.vertexColorIn, 3, gl.FLOAT, false, 0, 0);
+	    gl.vertexAttribPointer(Shaders.building.locations["vertexColorIn"], 3, gl.FLOAT, false, 0, 0);
 	}
 
     // can apparently be -1 if the variable is not used inside the shader
-    if (Shaders.building.locations.vertexNormal > -1)
+    if (Shaders.building.locations["vertexNormal"] > -1)
     {
 	    gl.bindBuffer(gl.ARRAY_BUFFER, this.normals);
-	    gl.vertexAttribPointer(Shaders.building.locations.vertexNormal, 3, gl.FLOAT, false, 0, 0);  //assigns array "normals"
+	    gl.vertexAttribPointer(Shaders.building.locations["vertexNormal"], 3, gl.FLOAT, false, 0, 0);  //assigns array "normals"
 	}
 
     var mvpMatrix = mat4.create();
     mat4.mul(mvpMatrix, projectionMatrix, modelViewMatrix);
 
-    gl.uniform1i(Shaders.building.locations.tex, 0); //select texture unit 0 as the source for the shader variable "tex" 
+    gl.uniform1i(Shaders.building.locations["tex"], 0); //select texture unit 0 as the source for the shader variable "tex" 
     gl.activeTexture(gl.TEXTURE0);  //successive commands (here 'gl.bindTexture()') apply to texture unit 0
     gl.bindTexture(gl.TEXTURE_2D, this.windowTexture); //render geometry without texture
 
-	gl.uniformMatrix4fv(Shaders.building.locations.modelViewProjectionMatrix, false, mvpMatrix);
+	gl.uniformMatrix4fv(Shaders.building.locations["modelViewProjectionMatrix"], false, mvpMatrix);
 
     var pos = Controller.localPosition;
-    gl.uniform3f(Shaders.building.locations.cameraPos, pos.x, pos.y, pos.z);
+    gl.uniform3f(Shaders.building.locations["cameraPos"], pos.x, pos.y, pos.z);
     
     gl.enable(gl.POLYGON_OFFSET_FILL);  //to prevent z-fighting between rendered edges and faces
     gl.polygonOffset(1,1);
@@ -976,21 +995,20 @@ Buildings.prototype.render = function(modelViewMatrix, projectionMatrix) {
     // ===
     //step 2: draw outline
     gl.useProgram(Shaders.flat);   //    Install the program as part of the current rendering state
-	glu.enableVertexAttribArrays(Shaders.flat);
+	glu.enableVertexAttribArrays(Shaders.flat); // setup vertex coordinate buffer
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.edgeVertices);   //select the vertex buffer as the currrently active ARRAY_BUFFER (for subsequent calls)
-	gl.vertexAttribPointer(Shaders.flat.locations.vertexPosition, 3, gl.FLOAT, false, 0, 0);  //assigns array "edgeVertices" bound above as the vertex attribute "vertexPosition"
+	gl.vertexAttribPointer(Shaders.flat.locations["vertexPosition"], 3, gl.FLOAT, false, 0, 0);  //assigns array "edgeVertices" bound above as the vertex attribute "vertexPosition"
 
     var mvpMatrix = mat4.create();
     mat4.mul(mvpMatrix, projectionMatrix, modelViewMatrix);
-	gl.uniformMatrix4fv(Shaders.flat.locations.modelViewProjectionMatrix, false, mvpMatrix);
+	gl.uniformMatrix4fv(Shaders.flat.locations["modelViewProjectionMatrix"], false, mvpMatrix);
 	
-	gl.uniform4fv( Shaders.flat.locations.color, [0.2, 0.2, 0.2, 1.0]);
+	gl.uniform4fv( Shaders.flat.locations["color"], [0.2, 0.2, 0.2, 1.0]);
 
     gl.drawArrays(gl.LINES, 0, this.numEdgeVertices);
 
 	glu.disableVertexAttribArrays(Shaders.flat); // cleanup
-    
 }
 
 
@@ -1006,8 +1024,8 @@ function convertToLocalCoordinates(buildings,  mapCenter)
     
         for (var j = 0; j < bld.nodes.length; j++)
         {
-            var dLat = bld.nodes[j].lat - mapCenter.lat;
-            var dLng = bld.nodes[j].lon - mapCenter.lng;
+            var dLat = bld.nodes[j]["lat"] - mapCenter.lat;
+            var dLng = bld.nodes[j]["lon"] - mapCenter.lng;
 
             bld.nodes[j].dx = dLng / 360 * circumference * lngScale;
             bld.nodes[j].dy = -dLat / 360 * circumference;
