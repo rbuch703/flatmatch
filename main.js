@@ -126,13 +126,19 @@ function offerMetadataLoaded(offerRaw)
     mapPlane.onProgress= scheduleFrameRendering;
 
     
-    lblAddress.innerHTML = offer.address;
-    lblLevel.innerHTML = getFloorName(offer.level);
-    lblSize.innerHTML = offer.area + "m²";
-    lblRooms.innerHTML = offer.numRooms;
-    lblRent.innerHTML = asPriceString(offer.rent);
-    //FIXME: potential XSS flaw
-    lblDetails.innerHTML = "<a target='_blank' href='http://www.wobau-magdeburg.de/"+ offer.detailsUrl + "'>[in neuem Tab]</a>"
+    lblAddress.textContent = offer.address;
+    lblLevel.textContent = getFloorName(offer.level);
+    lblSize.textContent = offer.area + "m²";
+    lblRooms.textContent = offer.numRooms;
+    lblRent.textContent = asPriceString(offer.rent);
+
+    lblDetails.innerHTML = "";  //dirty hack to remove all children
+    var a = document.createElement("A");
+    a.target = "_blank";
+    a.href = offer.contactWebsite;
+    a.textContent = "[in neuem Tab]";
+    lblDetails.appendChild(a);
+    //"<a target='_blank' href='"+  + "'></a>"
     //addressLog.innerHTML = offer.address;
 
 

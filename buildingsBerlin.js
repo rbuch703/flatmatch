@@ -9,14 +9,20 @@ function BerlinBuilding(x, y, mapCenter, lod)
     this.num = [x, y];
     this.mapCenter = mapCenter;
     this.geometries = [];
-    this.lod = lod;
+    //this.lod = lod;
+
+    var suffix = "_quarter";
+    if (lod == 1) suffix = "_half";
+    if (lod == 0) suffix = "_full";
     
-    //var bldgs = this;
+    var filename = "atlas/" + x + "/" + y + suffix + ".json";
+    //console.log(filename);
+    
     var oReq = new XMLHttpRequest();
     var tmp = this;
     oReq.onload = function() { tmp.onDataLoaded(oReq); }
     oReq.overrideMimeType("text/plain");
-    oReq.open("get", "atlas/" + x + "/" + y + ".json", true);
+    oReq.open("get", filename, true);
     oReq.send();
         
 }
@@ -159,13 +165,23 @@ function triangulate( outerRing, innerRings, coordsRef, texCoordsRef)
             var ring = [];
             var inner = innerRings[i];
             
+            var prevX = Infinity;
+            var prevY = Infinity;
             for (var j = 0; j < inner.length - 1; j++)
             {
                 var dir = sub3(inner[j], p0);
                 var x = dot3( dir, dir0);
                 var y = dot3( dir, dir1);
+
+                if (x == prevX && y == prevY)
+                    continue;
+
                 originalCoords[ [x,y] ] = inner[j];
+                
                 ring.push(new poly2tri.Point( x, y));
+                
+                prevX = x;
+                prevY = y;
             }
             ctx.addHole(ring);
         }
@@ -223,11 +239,6 @@ BerlinBuilding.prototype.onDataLoaded = function(req)
     }
         
     var data = JSON.parse(req.responseText);
-    var suffix = ".quarter";
-    if (this.lod == 1)
-        suffix = ".half";
-    else if (this.lod == 0)
-        suffix = ".half"; //HACK: only use half resolution to save texture memory
         
     for (var atlasUri in data)
     {
@@ -255,26 +266,18 @@ BerlinBuilding.prototype.onDataLoaded = function(req)
             vertices : glu.createArrayBuffer(coords),
             rawTexCoords : texCoords,
             texCoords : glu.createArrayBuffer(texCoords),
-            numVertices: (coords.length / 3)|0,
+            numVertices: (coords.length / 3)|0
         }
 
-        var g1 = Math.random()* 256;
-        var g2 = Math.random()* 256;
-        var g3 = Math.random()* 256;
-        var g4 = Math.random()* 256;
+        var g = Math.random() * 256;
         geometry.texture = glu.createTextureFromBytes(
-            new Uint8Array([  g1, g1, g1,
-                              g2, g2, g2,
-                               0,  0,    // 4 byte boundary alignment bytes
-                              g3, g3, g3,
-                              g4, g4, g4]
-                           ), 2, 2);
+            new Uint8Array([g,g,g,g,g,g,g,g,g,g,g,g,g,g]),2,2);
         
         if (atlasUri != null && atlasUri !== "null")
         {
             var image = new Image();
             image.onload = createTextureLoadHandler( geometry.texture, image);
-            image.src = atlasUri + suffix;
+            image.src = atlasUri;
         }
         
         this.geometries.push(geometry);
@@ -286,16 +289,15 @@ BerlinBuilding.prototype.render = function(modelViewMatrix, projectionMatrix)
 {
     if (!Shaders.ready)
         return;
+
+	//cannot use backface culling for now, as the data set contains incorrectly oriented faces
+    //gl.disable(gl.CULL_FACE);
     
     gl.useProgram(Shaders.textured);   //    Install the program as part of the current rendering state
     glu.enableVertexAttribArrays(Shaders.textured);
     var mvpMatrix = mat4.create();
     mat4.multiply(mvpMatrix, projectionMatrix, modelViewMatrix);
     gl.uniformMatrix4fv(Shaders.textured.locations["modelViewProjectionMatrix"], false, mvpMatrix);
-
-    gl.enable(gl.CULL_FACE);
-    gl.cullFace(gl.BACK);
-
 
     for (var i in this.geometries)
     {
@@ -310,19 +312,19 @@ BerlinBuilding.prototype.render = function(modelViewMatrix, projectionMatrix)
         gl.uniform1i(Shaders.textured.locations["tex"], 0); //select texture unit 0 as the source for the shader variable "tex" 
         gl.activeTexture(gl.TEXTURE0);  //successive commands (here 'gl.bindTexture()') apply to texture unit 0
         gl.bindTexture(gl.TEXTURE_2D, geometry.texture);  //render geometry using texture "tex" in texture unit 0
-        
+
         gl.drawArrays(gl.TRIANGLES, 0, geometry.numVertices);
 
     }   
 
     glu.disableVertexAttribArrays(Shaders.textured); //cleanup
+    gl.enable(gl.CULL_FACE);
 }
 
 BerlinBuilding.prototype.renderDepth = function(modelViewMatrix, projectionMatrix) {
     if (!Shaders.ready)
         return;
         
-
     gl.enable(gl.CULL_FACE);
     //HACK: A building casts the same shadow regardless of whether its front of back faces are used in the shadow computation.
     //      The only exception is the building the camera is located in: using front faces would prevent light to be casted on
@@ -386,15 +388,38 @@ Buildings.prototype.loadGeometry = function(location)
     }
     this.buildings = {};
 
+    var ua = navigator.userAgent.toLowerCase();
+    var isMobile = (ua.indexOf("mobile")  > -1) || 
+                   (ua.indexOf("tablet")  > -1) || 
+                   (ua.indexOf("android") > -1) ||
+                   (ua.indexOf("iphone")  > -1) ||
+                   (ua.indexOf("ipad")    > -1);
+
+    
     var xCenter = Math.floor(long2tile( location.lng, this.GEO_TILE_ZOOM_LEVEL));
     var yCenter = Math.floor(lat2tile(  location.lat, this.GEO_TILE_ZOOM_LEVEL));
     //console.log(xCenter, yCenter);
+    var tiles = [];
     for (var x = xCenter - this.RADIUS; x <= xCenter + this.RADIUS; x++)
         for (var y = yCenter - this.RADIUS; y <= yCenter + this.RADIUS; y++)
         {
             var lod = Math.max( Math.abs(xCenter - x), Math.abs(yCenter - y));
-            this.buildings[ [x, y] ] = new BerlinBuilding(x, y, location, lod );
+            //mobile devices tend to not have enough RAM to load all textures;
+            //so load them only at half the resolution (= quarter the size)
+            if (isMobile)   
+                lod += 1;
+                
+            tiles.push( [x, y, lod] );
         }
+
+    tiles.sort( function(a,b) { return a[2] > b[2];} );
+    //console.log(tiles);
+    for (var i in tiles)
+    {
+        var x = tiles[i][0];
+        var y = tiles[i][1];
+        this.buildings[ [x, y] ] = new BerlinBuilding(x, y, location, tiles[i][2] );
+    }
 
 }
 
@@ -436,39 +461,6 @@ Buildings.prototype.requestGeometry = function (newPosition)
 {
     
 }
-
-/*
-function triangulate(outline)
-{
-    //console.log("triangulating outline %o", outline);
-    var points = [];
-    //console.log("polygon has %s vertices", outline.length-1);
-    if ((outline[0].dx != outline[outline.length-1].dx) ||
-        (outline[0].dy != outline[outline.length-1].dy))
-        console.log("[ERR] Non-closed polygon in outline.");
-    
-    for (var i = 0; i < outline.length - 1; i++) 
-    {
-        points.push(new poly2tri.Point( outline[i].dx, outline[i].dy));
-    }
-    
-    var ctx = new poly2tri.SweepContext(points);
-    poly2tri.triangulate(ctx);
-    var triangles = ctx.getTriangles();
-    var vertexData = [];
-    for (var i in triangles)
-    {
-        var tri = triangles[i];
-        //console.log(tri);
-        vertexData.push( tri["points_"][0].x, tri["points_"][0].y);
-        vertexData.push( tri["points_"][1].x, tri["points_"][1].y);
-        vertexData.push( tri["points_"][2].x, tri["points_"][2].y);
-    }
-    return vertexData;
-    //console.log(vertexData);
-    
-}
-*/
 
 Buildings.prototype.render = function(modelViewMatrix, projectionMatrix) {
     for (var i in this.buildings)
