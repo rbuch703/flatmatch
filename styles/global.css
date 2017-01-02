@@ -1,0 +1,65 @@
+
+@font-face {
+  font-family: 'Droid Serif';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Droid Serif'), local('DroidSerif'), url(http://themes.googleusercontent.com/static/fonts/droidserif/v4/0AKsP294HTD-nvJgucYTaIbN6UDyHWBl620a-IRfuBk.woff) format('woff');
+}
+
+@font-face {
+  font-family: 'Source Sans Pro';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Source Sans Pro'), local('SourceSansPro-Regular'), url(http://themes.googleusercontent.com/static/fonts/sourcesanspro/v7/ODelI1aHBYDBqgeIAH2zlBM0YzuT7MdOe03otPbuUS0.woff) format('woff');
+}
+@font-face {
+  font-family: 'Source Sans Pro';
+  font-style: normal;
+  font-weight: 700;
+  src: local('Source Sans Pro Bold'), local('SourceSansPro-Bold'), url(http://themes.googleusercontent.com/static/fonts/sourcesanspro/v7/toadOcfmlt9b38dHJxOBGFkQc6VGVFSmCnC_l7QZG60.woff) format('woff');
+}
+
+
+
+body *{
+    font-family: 'Source Sans Pro', Verdana,Calibri,"Liberation Sans",Verdana,Arial,sans,sans-serif;
+    color: #444;
+}
+
+a {color: #44F; text-decoration: none;}
+
+a:hover { text-decoration: underline; }
+
+.bold {font-weight: bold;}
+
+.offerTitle {
+    font-family: 'Droid Serif', Verdana, sans, sans-serif;
+    background-color: #FFF; 
+    padding:5px
+}
+
+.offerBlock {
+    display:inline-block; 
+    vertical-align:top;
+    border: 1px solid #444; 
+    margin-right:5px; 
+    margin-bottom:5px
+}
+
+.offerContent {
+    padding-left:5px; 
+    padding-right:5px
+}
+
+.footerAnchor {
+    line-height:200%;
+}
+
+.mandatory { color:#f6931f; font-weight:bold}
+
+.myTable * {  vertical-align:text-top; }
+
+emph {
+    font-style:italic;
+}
+

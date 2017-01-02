@@ -1,0 +1,347 @@
+ <!DOCTYPE html> 
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no">
+
+    <!--
+    <link href='http://fonts.googleapis.com/css?family=Droid+Serif' rel='stylesheet' type='text/css'>
+    <link href='http://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700' rel='stylesheet' type='text/css'>
+    -->
+    <link   type="text/css" rel="stylesheet" href="styles/global.css" media="screen" />
+    <link   type="text/css" rel="stylesheet" href="styles/leaflet.css" />
+    <link   type="text/css" rel="stylesheet" href="styles/MarkerCluster.css" />
+    <link rel="stylesheet" href="http://code.jquery.com/ui/1.10.4/themes/smoothness/jquery-ui.css">
+
+    <script type="text/javascript" src="leaflet.js"></script>
+	<script type="text/javascript" src="scripts/TileLayer.Grayscale.js"></script>
+    <script type="text/javascript" src="scripts/leaflet.markercluster.js"></script> <!-- to cluster offer markers on the map for increased usability and speed-->
+    <script type="text/javascript" src="http://code.jquery.com/jquery-1.9.1.js"></script>
+    <script type="text/javascript" src="http://code.jquery.com/ui/1.10.4/jquery-ui.js"></script>
+    
+    <script type="text/javascript" src="scripts/amenities_md.js"></script>   <!-- TODO: replace by AJAX call -->
+    <script type="text/javascript" src="scripts/datatable.js"></script>
+    <script type="text/javascript" src="scripts/helpers.js"></script>
+	
+    <script type="text/javascript">
+        "use strict"
+
+    
+        function getDescription(offer)
+        {
+            return "[" + offer.landlord+"] " + offer.numRooms + " Zimmer (" + offer.area +"m²), " + getFloorName(offer.level) + ", für " + offer.rent + "€/Monat"
+        }
+        
+        var layerGroups;
+        var/*const*/ MAX_PRICE = 54*54;
+        var map;
+        var offerHoverMarker;
+        var objects = [];
+
+        function createIcon(name)      
+        { 
+            return L.icon( {
+                iconUrl: "images/marker-"+name+".png",
+                iconRetinaUrl: "images/marker-"+name+"-2x.png",
+                iconSize: [19,19],
+                iconAnchor: [9,9]})
+        }
+
+        var icons = {
+            red:             L.icon({ iconUrl: 'images/marker-icon-red.png', 
+                                      iconRetinaUrl: 'images/marker-icon-red-2x.png',
+                                      iconSize: [25,41],
+                                      iconAnchor: [12, 40]}),
+            multi:           L.icon({ iconUrl: 'images/marker-icon-multi.png',
+                                      iconRetinaUrl: 'images/marker-icon-multi-2x.png',
+                                      iconAnchor: [12, 40], iconSize: [25,41], popupAnchor: [-3, -76] }),
+        };
+        
+        var iconNames = ["restaurant", "school", "pharmacy", "cafe", "bar"];
+
+        for (var i in  iconNames)
+        {
+            icons[ iconNames[i] ]         = createIcon( iconNames[i]);
+            icons[ iconNames[i]+"Multi" ] = createIcon( iconNames[i] + "-multi" );
+        };
+
+        var layers = 
+        {
+            "school":     { title: "Schulen",     icon: icons.school,     iconMulti: icons.schoolMulti,     enabledPerDefault: true},
+            "pharmacy":   { title: "Apotheke",    icon: icons.pharmacy,   iconMulti: icons.pharmacyMulti,   enabledPerDefault: true},
+            "restaurant": { title: "Restaurants", icon: icons.restaurant, iconMulti: icons.restaurantMulti, enabledPerDefault: false},
+            "cafe":       { title: "Cafes",       icon: icons.cafe,       iconMulti: icons.cafeMulti,       enabledPerDefault: false},
+            "bar":        { title: "Bars",        icon: icons.bar,        iconMulti: icons.barMulti,        enabledPerDefault: false},
+            //"fast_food":  { title: "Fast-Food Restaurants", icon: icons.restaurant, iconMulti: icons.restaurantMulti, enabledPerDefault: false}
+        };
+
+        var typeToLayer = 
+        {
+            "fast_food": "restaurant"
+        };
+
+
+        function init()
+        {
+            var req = new XMLHttpRequest();
+            req.open("GET", "rest/get/offers/9/272/168"); //smallest tile that covers all of Magdeburg
+            req.responseType = "";
+            req.onreadystatechange = function() 
+            { 
+                if (this.readyState != 4 || this.response == null)
+                    return;
+
+                objects = JSON.parse(this.response);
+                createOfferBlock(objects[0]);
+                selectionChanged();
+            }
+            
+            req.send();
+        
+            $( "#slider-price" ).slider({
+                range: true,
+                min: 0,
+                max: Math.sqrt(MAX_PRICE),
+                values: [ Math.sqrt(0), Math.sqrt(1001) ],
+                step:0.01,
+                stop: selectionChanged,
+                slide: function( event, ui ) 
+                {
+                    var minPrice = Math.floor(Math.pow( ui.values[0], 2));
+                    var maxPrice = Math.floor(Math.pow( ui.values[1], 2));
+                    $( "#lblPrice" ).text( getPriceRangeString(minPrice, maxPrice));
+                }
+
+                });
+
+            $( "#slider-rooms" ).slider({
+                range: true,
+                min: 1,
+                max: 8,
+                values: [1,8],
+                step:1,
+                stop:selectionChanged,
+                slide: function( event, ui ) { $("#lblRooms").text( getRoomRangeString(ui.values)); }
+                });
+
+            $( "#slider-area" ).slider({
+                range: true,
+                min: 20,
+                max: 120,
+                values: [25, 120],
+                step:1,
+                stop:selectionChanged,
+                slide: function( event, ui ) { $("#lblArea").text( getAreaRangeString(ui.values)); }
+                });
+
+            
+            sliderChanged();   //to set initial value
+        
+            map = L.map('map_div').setView([52.15, 11.63], 14); //global 
+            
+            L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: 'OpenStreetMap',
+                maxZoom: 19, minZoom:1
+            }).addTo(map);
+
+            //more layers are added dynamically later
+            layerGroups = { 
+                housingOffers: L.markerClusterGroup({maxClusterRadius:20, iconCreateFunction: function(cluster) { return icons.multi; }})
+            };
+
+            //necessary to disconnect layers[i].iconMulti from the closure variable 'i'
+            var dummy = function( icon) { return function(){return icon}; }
+            
+            for (var i in layers)
+                layerGroups[i] = L.markerClusterGroup({ maxClusterRadius: 60, iconCreateFunction: dummy( layers[i].iconMulti)});
+
+
+            for (var i in amenities)
+            {
+                var am = amenities[i];
+                
+                if (am.type in layers)
+                    layerGroups[am.type].addLayer(L.marker( [am.lat, am.lon], {title: am.name, icon: layers[am.type].icon}));
+                else if (am.type in typeToLayer)
+                {
+                    var layer = typeToLayer[am.type];
+                    layerGroups[layer].addLayer(L.marker( [am.lat, am.lon], {title: am.name, icon: layers[layer].icon}));
+                    
+                }
+                    
+            }
+            
+            for (var i in layers)
+                if (layers[i].enabledPerDefault)
+                    layerGroups[i].addTo(map);
+
+            layerGroups.housingOffers.addTo(map);
+
+            L.control.scale({imperial:false, position:"topright"}).addTo(map);
+
+
+		    var overlays = {};
+            for (var i in layers)
+                overlays[layers[i].title] = layerGroups[i];
+
+		        
+		    L.control.layers( {}, overlays).addTo(map);
+            
+            
+            selectionChanged(); //to initialize the text corresponding to the slider positions
+        }
+
+        
+        function sliderChanged()
+        {
+            var minPrice =  Math.floor(Math.pow($( "#slider-price" ).slider( "values", 0 ), 2));
+            var maxPrice =  Math.floor(Math.pow($( "#slider-price" ).slider( "values", 1 ), 2));
+            $( "#lblPrice").text( getPriceRangeString(minPrice, maxPrice ));
+            $( "#lblRooms").text( getRoomRangeString( $("#slider-rooms").slider( "option", "values" ) ));
+            $( "#lblArea" ).text( getAreaRangeString( $("#slider-area" ).slider( "option", "values" ) ));
+        }
+
+       
+        function getOffersMatchingCriteria(offers)
+        {
+            var minPrice =  Math.floor(Math.pow($( "#slider-price" ).slider( "values", 0 ), 2)/10)*10;
+            var maxPrice =  Math.floor(Math.pow($( "#slider-price" ).slider( "values", 1 ), 2)/10)*10;
+            if (maxPrice == MAX_PRICE) maxPrice = Infinity;
+            
+            var minRooms = $( "#slider-rooms" ).slider( "values", 0 )
+            var maxRooms = $( "#slider-rooms" ).slider( "values", 1 )
+            if (maxRooms == 8) maxRooms = Infinity;
+            
+            var minArea = $( "#slider-area" ).slider( "values", 0 );
+            var maxArea = $( "#slider-area" ).slider( "values", 1 );
+            if (minArea == 20) minArea = 0;
+            if (maxArea ==120) maxArea = Infinity;
+
+            var res = [];
+
+            for (var i in objects)
+            {
+                var obj = objects[i];
+                if (!(obj.lon && obj.lat)) continue;
+
+                var price = obj.rent;//typeof(obj.rent) == "number" ? obj.rent : parseFloat(obj.rent.replace(",", "."));
+                var rooms = parseInt(obj.numRooms);
+                var area = obj.area;//typeof(obj.area) == "number" ? obj.area : parseFloat(obj.area.replace(",", "."));
+                if (price < minPrice || price > maxPrice) continue;
+                if (rooms < minRooms || rooms > maxRooms) continue;
+                if (area < minArea || area > maxArea) continue;
+                
+                res.push(obj);
+            }            
+            return res;
+        }
+
+        function onOfferHoverChanged(offer)
+        {
+            if (offerHoverMarker)
+                map.removeLayer(offerHoverMarker);
+
+            if (offer)            
+            {
+                offerHoverMarker = L.marker( [offer.lat, offer.lon], {title: offer.address, icon:icons.red, zIndexOffset:1000})/*.bindPopup(marker.popup)*/
+                map.addLayer(offerHoverMarker);
+            }
+        }        
+        
+        function selectionChanged()
+        {
+            sliderChanged();   //update ui
+
+            layerGroups.housingOffers.clearLayers();
+            
+            while (offers.firstChild) 
+                offers.removeChild(offers.firstChild);
+
+
+            var matchingOffers = getOffersMatchingCriteria(offers);
+            numOffersSpan.textContent = matchingOffers.length;
+
+            for (var i in matchingOffers)
+            {
+                var obj = matchingOffers[i];
+                
+                var offerBlock = createOfferBlock(obj);
+                offerBlock.onmouseover = function(ev) { onOfferHoverChanged(this.offer, ev); };
+                offerBlock.onmouseout  = function(ev) { onOfferHoverChanged(null, ev); };
+                offers.appendChild( offerBlock );
+
+                var hover = obj.address + "\n";
+                var popup = "<h3>Angebote an Adresse: " + obj.address + "</h3>";
+                hover += "\n"+getDescription(obj);
+                
+                if (obj.detailsUrl)
+                {
+                    if (obj.layoutId)
+                        popup += "<a target ='_blank' href='flatview.html?rowid="+ obj.rowid + "'>" + getDescription(obj) +"</a><br>";
+                    else
+                        popup += "<a target ='_blank' href='http://www.wobau-magdeburg.de/"+ obj.detailsUrl + "'>" + getDescription(obj) +"</a><br>";
+
+                }
+                else
+                    popup += "<span>"+getDescription(obj)+"</span><br>";
+                    
+                layerGroups.housingOffers.addLayer(L.marker( [obj.lat, obj.lon], {title: hover}).bindPopup(popup));
+            }
+    
+        }
+   
+    </script>
+    <title>Mietwohnungen in Magdeburg</title>
+</head>
+
+<body onload="init()"  > <!-- style ="padding: 0px; margin: 0px;" -->
+<h2 style="text-align:center">Mietwohnungen in Magdeburg</h2>
+
+
+<div id="content" style="position:absolute; right:10px; top:50px; bottom:0px">
+    <div id="map_div" style="position:fixed; top:50px; left:0px; bottom:0px; width:74%"> </div>
+
+    <div id="nav" style="background-color:#EEE; position:fixed; width:25%; top:50px; bottom:50px; right: 0px; overflow-y:scroll; padding-left:20px">
+        <h3>Suchkriterien</h3>
+        Preis:        <span id="lblPrice" style="font-weight:bold;"></span> <div id="slider-price" style="width:300px"></div> <br>
+        Anzahl Räume: <span id="lblRooms" style="font-weight:bold;"></span> <div id="slider-rooms" style="width:300px"></div> <br>
+        Fläche:       <span id="lblArea"  style="font-weight:bold;"></span> <div id="slider-area"  style="width:300px"></div> <br>
+        <span id="numOffersSpan" style="font-style: italic">0</span> Angebote entsprechen dieser Auswahl:<br>
+
+        <div id="offers">
+        </div>        
+        
+        <!--
+        <div class="offerBlock">
+            <div class="offerTitle">Schleinufer 7</div>
+            <div class="offerContent">
+                <span class="bold">Größe:</span> 65 m², 3 Zimmer<br>
+                <span class="bold">Preis:</span> 450€ KM+NK<br>
+                <span class="bold">Stockwerk:</span> 7. Etage<br>
+                <span class="bold">Anbieter:</span> WOBAU<br>
+                <a class="footerAnchor" href="#">Details und 3D-Ansicht</a>
+            </div>
+        </div>
+        -->
+        
+        <!-- <table id="tblOffers" style="width:100%">
+        <thead>
+            <tr><th>Anschrift</th> <th>Etage</th> <th>Anzahl Zimmer</th> <th>Fläche</th> <th>Preis</th>  <th>Preis/m²</th></tr>
+        </thead>
+        <tbody>
+        </tbody>
+        </table> -->
+
+    </div>
+    
+    <div style="position:fixed; bottom:5px; right:20px; padding-left:20px;font-size:110%;text-align:right">
+Fragen? <a target="_blank" href="mailto:rbuch703@gmail.com">Kontakt</a>
+                   </div>    
+                        
+</div> 
+
+
+</body>
+
+
+</html>
