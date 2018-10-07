@@ -13,8 +13,9 @@ var gl;
 var fieldOfView = 90/16*9;
 var layoutId;// = 158;
 var rowId;
-var OFFER_REST_BASE_URL = "http://rbuch703.de/rest";
+//var OFFER_REST_BASE_URL = "http://rbuch703.de/rest";
 //var OFFER_REST_BASE_URL = "http://localhost:1080/rest_v2"
+var OFFER_REST_BASE_URL = "rest"
 
 var mqSaveSpace = window.matchMedia( "(max-width: 799px), (max-height: 799px)" );
 var mqLandscape = window.matchMedia( "(orientation: landscape)" );
